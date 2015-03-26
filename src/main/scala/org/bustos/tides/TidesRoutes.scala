@@ -23,6 +23,7 @@ trait TidesRoutes extends HttpService {
     getFromResourceDirectory("webapp") ~
       path("register") {
         parameters('id, 'address, 'port.as[Int]) { (id, address, port) =>
+          logger.info(id + " " + address + " " + port)
           controller ! NodeConnect(new InetSocketAddress(address, port))
           complete("")
         }

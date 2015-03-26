@@ -4,7 +4,7 @@ name := "TidesServer"
 
 version := "1.0"
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.10.4"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
@@ -24,7 +24,6 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-json"           % "1.3.1",
     "com.typesafe.akka"   %%  "akka-actor"           % akkaV,
     "com.typesafe.akka"   %%  "akka-testkit"         % akkaV   % "test",
-    "com.typesafe.slick"  %%  "slick"                % "2.1.0",
     "org.specs2"          %%  "specs2-core"          % "2.3.11" % "test",
     "com.wandoulabs.akka" %% "spray-websocket"       % "0.1.3",
     "log4j"               %   "log4j"                % "1.2.14",
