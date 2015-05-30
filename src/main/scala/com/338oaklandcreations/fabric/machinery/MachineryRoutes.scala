@@ -1,4 +1,4 @@
-package org.bustos.tides
+package com._338oaklandcreations.fabric.machinery
 
 import spray.can.Http
 import spray.can.server.UHttp
@@ -10,21 +10,24 @@ import DefaultJsonProtocol._
 import akka.actor.{ ActorRef }
 import org.slf4j.{ Logger, LoggerFactory }
 
-trait TidesRoutes extends HttpService {
+trait MachineryRoutes extends HttpService {
 
-  import TidesController._
+  import MachineryController._
   import java.net.InetSocketAddress
 
   val logger = LoggerFactory.getLogger(getClass)
 
   val controller: ActorRef
 
-  val tidesRoutes = {
+  val machineryRoutes = {
     getFromResourceDirectory("webapp") ~
+    path("pixel" / IntNumber / "0x([0-9]{6})".r) { (pixelId, color) =>
+      controller !
+    } ~
       path("register") {
-        parameters('id, 'address, 'port.as[Int]) { (id, address, port) =>
-          logger.info(id + " " + address + " " + port)
-          controller ! NodeConnect(new InetSocketAddress(address, port))
+        parameters('id, 'address, 'port.as[Int]) { (mac, address, port) =>
+          logger.info(mac + " " + address + " " + port)
+          controller ! NodeConnect(new InetSocketAddress(address, port), mac)
           complete("")
         }
       } ~

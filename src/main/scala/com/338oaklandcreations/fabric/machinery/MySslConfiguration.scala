@@ -1,4 +1,4 @@
-package org.bustos.tides
+package com._338oaklandcreations.fabric.machinery
 
 import java.security.{ SecureRandom, KeyStore }
 import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }

@@ -1,4 +1,4 @@
-package org.bustos.tides
+package com._338oaklandcreations.fabric.machinery
 
 import java.net.InetSocketAddress
 
@@ -8,18 +8,18 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
-object TidesController {
-  case class NodeConnect(remote: InetSocketAddress)
+object MachineryController {
+  case class NodeConnect(remote: InetSocketAddress, mac: String)
 
   val NodePingFrequency = 50 seconds
   val PingMessage = ByteString("P")
 }
 
-class TidesController extends Actor with ActorLogging {
+class MachineryController extends Actor with ActorLogging {
 
   import Node._
-  import TidesConsole._
-  import TidesController._
+  import MachineryConsole._
+  import MachineryController._
   import context._
 
   val logger = LoggerFactory.getLogger(getClass)
@@ -27,22 +27,31 @@ class TidesController extends Actor with ActorLogging {
   var nodes = Map.empty[String, ActorRef]
   var nodePings = Map.empty[String, Cancellable]
 
-  val consoleInput = actorOf(Props[TidesConsole], "tidesConsole")
+  logger.info("Starting Controller")
+
+  val consoleInput = actorOf(Props[MachineryConsole], "machineryConsole")
+  val fadecandy = actorOf(Props[OpcActor], "opcController")
+
+  def reportCountStatus = {
+    logger.info("Count of connected nodes: " + nodes.size)
+  }
 
   def addNode(node: ActorRef) = {
     nodes = nodes + (node.path.name -> node)
     nodePings = nodePings + (node.path.name -> system.scheduler.schedule(NodePingFrequency, NodePingFrequency, nodes(node.path.name), PingMessage))
+    reportCountStatus
   }
 
   def dropNode(node: ActorRef) = {
-    logger.info("Node dropped: " + node.path.name)
+    logger.warn("Node dropped: " + node.path.name)
     nodes = nodes - node.path.name
     nodePings = nodePings - node.path.name
+    reportCountStatus
   }
 
   def receive = {
-    case NodeConnect(address) => {
-      addNode(context.actorOf(Props(new Node(address, self)), address.getHostString))
+    case NodeConnect(address, mac) => {
+      addNode(context.actorOf(Props(new Node(address, self)), mac + "@" + address.getHostString + ":" + address.getPort))
     }
     case NodeConnectionClosed => {
       dropNode(sender())
@@ -51,14 +60,14 @@ class TidesController extends Actor with ActorLogging {
       dropNode(sender())
     }
     case NodeWriteFailed => {
-      logger.info("Write Failed")
+      logger.warn("Write Failed")
     }
     case received: ByteString => {
-      logger.info("Manager: " + received.decodeString(UTF_8))
+      logger.info("Received: " + received.decodeString(UTF_8))
     }
     // Console activity
     case ConsoleInput(inputString) => {
-      logger.debug("Console input: " + inputString)
+      logger.info("Console input: " + inputString)
       nodes.foreach({ case (k, v) => v ! ByteString(inputString) })
     }
     case _ => {

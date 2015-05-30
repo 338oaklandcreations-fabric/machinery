@@ -1,4 +1,4 @@
-package org.bustos.tides
+package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{ ActorSystem, Actor, Props, ActorLogging, ActorRef, ActorRefFactory }
 import akka.pattern.ask
@@ -20,16 +20,16 @@ import org.slf4j.{ Logger, LoggerFactory }
 object WebSocketWorker {
   case class Push(msg: String)
 
-  def props(serverConnection: ActorRef) = Props(classOf[WebSocketWorker], serverConnection)
+  def props(serverConnection: ActorRef, controllerActor: ActorRef) = Props(classOf[WebSocketWorker], serverConnection, controllerActor)
 }
 
-class WebSocketWorker(val serverConnection: ActorRef) extends HttpServiceActor with WebSocketServerWorker with TidesRoutes {
+class WebSocketWorker(val serverConnection: ActorRef, controllerActor: ActorRef) extends HttpServiceActor with WebSocketServerWorker with MachineryRoutes {
 
   import WebSocketWorker._
 
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
-  val controller = context.actorOf(Props[TidesController], "controller")
+  val controller = controllerActor
 
   def businessLogic: Receive = {
     // just bounce frames back for Autobahn testsuite
@@ -49,6 +49,6 @@ class WebSocketWorker(val serverConnection: ActorRef) extends HttpServiceActor w
 
     implicit val refFactory: ActorRefFactory = context
 
-    runRoute(tidesRoutes)
+    runRoute(machineryRoutes)
   }
 }

@@ -1,4 +1,4 @@
-package org.bustos.tides
+package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.actor.Stash
@@ -6,7 +6,7 @@ import akka.actor.ActorLogging
 import akka.io.{ IO, Tcp }
 import akka.util.ByteString
 import java.net.InetSocketAddress
-import org.bustos.tides.Node.{NodeWriteFailed, NodeConnectionClosed, NodeConnectionFailed}
+import com._338oaklandcreations.fabric.machinery.Node.{NodeWriteFailed, NodeConnectionClosed, NodeConnectionFailed}
 import org.slf4j.LoggerFactory
 
 object Node {
@@ -16,7 +16,7 @@ object Node {
   case class NodeConnectionClosed()
   case class NodeWriteFailed()
 
-  val UTF_8 = "UTF_8"
+  val UTF_8 = "UTF-8"
 }
 
 class Node(remote: InetSocketAddress, listener: ActorRef) extends Actor with ActorLogging {
@@ -27,14 +27,14 @@ class Node(remote: InetSocketAddress, listener: ActorRef) extends Actor with Act
 
   val logger = LoggerFactory.getLogger(getClass)
   var connectionTestCount = 0
-  var connectionTestStart = System.currentTimeMillis
+  var connectionTestStart = 0L
   val CONNECTION_TEST_LIMIT = 10
 
   IO(Tcp) ! Connect(remote)
 
   def receive = {
     case CommandFailed(_: Connect) =>
-      logger.info("Failed connect: " + self.path.name)
+      logger.warn("Failed connect: " + self.path.name)
       listener ! NodeConnectionFailed
       context stop self
     case c @ Connected(remote, local) =>
@@ -43,19 +43,21 @@ class Node(remote: InetSocketAddress, listener: ActorRef) extends Actor with Act
       val connection = sender()
       connection ! Register(self)
       connection ! Write(ByteString("X"))
-      context become connected(connection)
-    //context become connectionTest(connection)
-    //connection ! Write(ByteString("P"))
+      context become connectionTest(connection)
+      connection ! Write(ByteString("P"))
   }
 
   def connectionTest(connection: ActorRef): Receive = {
     case Received(data) =>
-      logger.info("Received: " + data.decodeString(UTF_8))
-      connectionTestCount = connectionTestCount + 1
       if (connectionTestCount > CONNECTION_TEST_LIMIT) {
-        logger.info("Connection test time: " + (System.currentTimeMillis - connectionTestStart))
+        val testTime = ((System.currentTimeMillis - connectionTestStart) / connectionTestCount)
+        logger.info("Round trip time: " + testTime + " ms")
         context become connected(connection)
-      } else connection ! Write(ByteString("P"))
+      } else {
+        if (connectionTestCount == 0) connectionTestStart = System.currentTimeMillis
+        connectionTestCount = connectionTestCount + 1
+        connection ! Write(ByteString("P"))
+      }
   }
 
   def connected(connection: ActorRef): Receive = {
@@ -70,9 +72,12 @@ class Node(remote: InetSocketAddress, listener: ActorRef) extends Actor with Act
       logger.info(self.path.name + ": " + data.decodeString(UTF_8))
       listener ! data
     case "close" =>
+      logger.info("close")
       connection ! Close
     case _: ConnectionClosed =>
+      logger.info("Connection Closed")
       listener ! NodeConnectionClosed
       context stop self
+    case _ => logger.info("Unknown Message")
   }
 }

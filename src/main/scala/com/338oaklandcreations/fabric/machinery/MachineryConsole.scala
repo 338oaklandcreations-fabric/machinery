@@ -1,4 +1,4 @@
-package org.bustos.tides
+package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{ Actor, ActorRef, Props, ActorSystem }
 import akka.actor.Stash
@@ -11,13 +11,13 @@ import akka.actor.ActorLogging
  * to the Tides controller.
  */
 
-object TidesConsole {
+object MachineryConsole {
   case class ConsoleInput(inputString: String)
 }
 
-class TidesConsole extends Actor with ActorLogging with Stash {
+class MachineryConsole extends Actor with ActorLogging with Stash {
 
-  import TidesConsole._
+  import MachineryConsole._
 
   for (ln <- io.Source.stdin.getLines) context.parent ! ConsoleInput(ln)
 
