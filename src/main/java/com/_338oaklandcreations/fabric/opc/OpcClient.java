@@ -336,57 +336,6 @@ public class OpcClient implements AutoCloseable {
 		return (r << 16) | (g << 8) | (b);
 	}
 	
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-	// Pixel strip test
-	// This is just test code.  Write your own code that sets up your pixel configuration,
-	// animation combinations, and interactions.
-	
-	public static void main(String[] arg) throws Exception {
-		String FC_SERVER_HOST = System.getProperty("fadecandy.server", "raspberrypi.local");
-		int FC_SERVER_PORT = Integer.parseInt(System.getProperty("fadecandy.port", "7890"));
-		int STRIP1_COUNT = Integer.parseInt(System.getProperty("fadecandy.strip1.count", "64"));
-		
-		OpcClient server = new OpcClient(FC_SERVER_HOST, FC_SERVER_PORT);
-		OpcDevice fadeCandy = server.addDevice();
-		PixelStrip strip = fadeCandy.addPixelStrip(0, STRIP1_COUNT);
-		System.out.println(server.getConfig());
-		int wait = 50;
-		
-		// Color wipe: in red, green, and blue
-		for (int color : new int[]{0xFF0000, 0x00FF00, 0x0000FF}) {
-			for (int i=0; i<strip.getPixelCount(); i++) {
-				strip.setPixelColor(i, color);
-				server.show();
-				Thread.sleep(wait); 
-			}
-			server.clear();
-			server.show();
-		}
-		
-		// Rainbow
-		for (int j=0; j<256; j++) {
-			for (int i=0; i<strip.getPixelCount(); i++) {
-				strip.setPixelColor(i, colorWheel(i+j));
-			}
-			server.show();
-			Thread.sleep(wait); 
-		}
-		
-		// Rainbow cycle
-		for (int j=0; j<256*5; j++) {
-			for (int i=0; i<strip.getPixelCount(); i++) {
-				int c = (int)Math.round(i * 256.0 / strip.getPixelCount());
-				strip.setPixelColor(i, colorWheel(c + j));
-			}
-			server.show();
-			Thread.sleep(wait); 
-		}
-		
-		server.clear();
-		server.show();
-		server.close();
-	}
-	
 	/**
 	 * Input a value 0 to 255 to get a color value.
 	 * The colors are a transition r - g - b - back to r.

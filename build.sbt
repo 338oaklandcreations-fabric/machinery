@@ -1,3 +1,4 @@
+import AssemblyKeys._
 import com.typesafe.sbt.SbtStartScript
 
 name := "Machinery"
@@ -5,6 +6,8 @@ name := "Machinery"
 version := "1.0"
 
 scalaVersion := "2.10.4"
+
+assemblySettings
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
