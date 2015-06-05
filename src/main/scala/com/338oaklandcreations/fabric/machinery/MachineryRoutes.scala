@@ -1,20 +1,24 @@
 package com._338oaklandcreations.fabric.machinery
 
-import spray.can.Http
-import spray.can.server.UHttp
+import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.util.Timeout
+import org.slf4j.LoggerFactory
 import spray.routing._
 import spray.json._
+import DefaultJsonProtocol._
 import spray.http._
 import MediaTypes._
-import DefaultJsonProtocol._
+
 import scala.concurrent._
-import akka.actor.{ ActorRef }
-import akka.pattern.ask
-import org.slf4j.{ Logger, LoggerFactory }
+import scala.concurrent.duration._
 
 trait MachineryRoutes extends HttpService {
 
+  import HostStatistics._
   import OpcActor._
+
+  implicit val defaultTimeout = Timeout(10 seconds)
 
   val logger = LoggerFactory.getLogger(getClass)
 
@@ -37,6 +41,27 @@ trait MachineryRoutes extends HttpService {
         controller ! AnimationRate(frequency)
         complete {
           frequency.toString
+        }
+      } ~
+      path("hostMemory") {
+        val future = controller ? TimeSeriesRequestMemory
+        val message: List[Double] = Await.result(future.mapTo[List[Double]], defaultTimeout.duration)
+        respondWithMediaType(`application/json`) {
+          complete(message.toJson.toString)
+        }
+      } ~
+      path("hostCPU") {
+        val future = controller ? TimeSeriesRequestCPU
+        val message: List[Double] = Await.result(future.mapTo[List[Double]], defaultTimeout.duration)
+        respondWithMediaType(`application/json`) {
+          complete(message.toJson.toString)
+        }
+      } ~
+      path("hostBattery") {
+        val future = controller ? TimeSeriesRequestBattery
+        val message: List[Double] = Await.result(future.mapTo[List[Double]], defaultTimeout.duration)
+        respondWithMediaType(`application/json`) {
+          complete(message.toJson.toString)
         }
       } ~
       path("clear") { ctx =>

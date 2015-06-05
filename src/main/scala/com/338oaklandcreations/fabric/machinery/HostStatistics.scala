@@ -1,4 +1,4 @@
-package org._338oaklandcreations.fabric
+package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{ Actor, ActorRef, Props, ActorSystem }
 import akka.actor.ActorLogging
@@ -17,6 +17,7 @@ object HostStatistics {
   case class TimeSeriesRequestCPU()
   case class TimeSeriesRequestMemory()
   case class TimeSeriesRequestBattery()
+  case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
 }
 /** Communication object for monitoring process statistics
@@ -30,8 +31,8 @@ class HostStatistics extends Actor with ActorLogging {
   var cpuHistory: List[Double] = List(0.0)
   var memoryHistory: List[Double] = List(0.0)
   var batteryHistory: List[Double] = List(0.0)
-  val tickInterval = 5 seconds
-  val hoursToTrack = 5 hours
+  var tickInterval = 5 seconds
+  var hoursToTrack = 5 hours
   val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
 
   val logger =  LoggerFactory.getLogger(getClass)
@@ -41,6 +42,10 @@ class HostStatistics extends Actor with ActorLogging {
   }
 
   def receive = {
+    case Settings(newTickInterval, newHoursToTrack) => {
+      tickInterval = newTickInterval seconds;
+      hoursToTrack = newHoursToTrack hours;
+    }
     case TimeSeriesRequestCPU => {
       sender ! MetricHistory(cpuHistory)
     }
