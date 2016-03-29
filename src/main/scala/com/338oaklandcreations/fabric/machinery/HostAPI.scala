@@ -1,22 +1,43 @@
+/*
+
+    Copyright (C) 2016 Mauricio Bustos (m@bustos.org) & 338.oakland creations
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
+
 package com._338oaklandcreations.fabric.machinery
 
-import akka.actor.{ Actor, ActorRef, Props, ActorSystem }
-import akka.actor.ActorLogging
+import akka.actor.{Actor, ActorLogging}
+import org.slf4j.LoggerFactory
+
 import scala.concurrent.duration._
-
 import scala.sys.process._
-
-import org.slf4j.{Logger, LoggerFactory}
 
 /** Communication object for monitoring process statistics
   *
   * Collects processor statistics (e.g. CPU, free memory etc) for monitoring
   */
-object HostStatistics {
-  case class Tick()
-  case class TimeSeriesRequestCPU()
-  case class TimeSeriesRequestMemory()
-  case class TimeSeriesRequestBattery()
+object HostAPI {
+  case object Tick
+  case object TimeSeriesRequestCPU
+  case object TimeSeriesRequestMemory
+  case object TimeSeriesRequestBattery
+  case object Reboot
+  case object Shutdown
+
+  case class CommandResult(result: Int)
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
 }
@@ -24,9 +45,10 @@ object HostStatistics {
   *
   *  @constructor create a new process stats object
   */
-class HostStatistics extends Actor with ActorLogging {
+class HostAPI extends Actor with ActorLogging {
+
+  import HostAPI._
   import context._
-  import HostStatistics._
 
   var cpuHistory: List[Double] = List(0.0)
   var memoryHistory: List[Double] = List(0.0)
@@ -55,6 +77,8 @@ class HostStatistics extends Actor with ActorLogging {
     case TimeSeriesRequestBattery => {
       sender ! MetricHistory(batteryHistory)
     }
+    case Shutdown => CommandResult(Process("sudo shutdown").!)
+    case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {
       val cpuCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $3} END {print sum}'" :: Nil).!!
       val cpuCountDouble: Double = cpuCount.toDouble

@@ -5,7 +5,7 @@ name := "Machinery"
 
 version := "1.0"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.7"
 
 assemblySettings
 
@@ -28,10 +28,9 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-testkit"        % sprayV  % "test",
     "io.spray"            %%  "spray-json"           % "1.3.1",
     "com.typesafe.akka"   %%  "akka-actor"           % akkaV,
-    "com.typesafe.akka"   %%  "akka-testkit"         % akkaV   % "test",
+    "com.typesafe.akka"   %%  "akka-testkit"         % akkaV % "test",
     "org.specs2"          %%  "specs2-core"          % "2.3.11" % "test",
-    "com.wandoulabs.akka" %% "spray-websocket"       % "0.1.3",
-    "log4j"                %   "log4j"               % "1.2.14",
+    "log4j"               %   "log4j"                % "1.2.14",
     "org.slf4j"           %   "slf4j-api"            % "1.7.10",
     "org.slf4j"           %   "slf4j-log4j12"        % "1.7.10",
     "joda-time"           %   "joda-time"            % "2.7",
