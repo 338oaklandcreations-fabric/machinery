@@ -21,18 +21,16 @@ package com._338oaklandcreations.fabric.machinery
 
 import java.net.InetAddress
 
-import akka.actor.{ActorLogging, _}
+import akka.actor._
 import akka.pattern.ask
-import akka.util.Timeout
+import akka.util.ByteString
 import org.slf4j.LoggerFactory
 import spray.http.DateTime
 import spray.http.MediaTypes._
 import spray.http.StatusCodes._
-import spray.json.DefaultJsonProtocol._
 import spray.json._
 import spray.routing._
 
-import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
@@ -63,10 +61,11 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
 
   val routes =
     setPattern ~
-    getHostMemory ~
-    getHostCPU ~
-    shutdown ~
-    reboot
+      getHostMemory ~
+      getHostCPU ~
+      getHeartbeat ~
+      shutdown ~
+      reboot
 
   val authenticationRejection = RejectionHandler {
     case AuthenticationRejection(message) :: _ => complete(400, message)
@@ -138,6 +137,20 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case history: MetricHistory => ctx.complete(history.toJson.toString)
+            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
+      }
+    }
+  }
+  def getHeartbeat = get {
+    path("heartbeat") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val future = controller ? HeartbeatRequest
+        future onComplete {
+          case Success(success) => success match {
+            case heartbeat: ByteString => ctx.complete(heartbeat.toString.toJson.toString)
             case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
           }
           case Failure(failure) => ctx.complete(400, failure.toString)

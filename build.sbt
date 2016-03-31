@@ -15,8 +15,6 @@ resolvers += "Spray" at "http://repo.spray.io"
 
 lazy val root = (project in file(".")).enablePlugins(SbtTwirl)
 
-javaOptions in run += "-Dlog4j.debug"
-
 seq(SbtStartScript.startScriptForClassesSettings: _*)
 
 libraryDependencies ++= {
@@ -26,13 +24,13 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-can"            % sprayV,
     "io.spray"            %%  "spray-routing"        % sprayV,
     "io.spray"            %%  "spray-testkit"        % sprayV  % "test",
-    "io.spray"            %%  "spray-json"           % "1.3.1",
+    "io.spray"            %%  "spray-json"           % sprayV,
     "com.typesafe.akka"   %%  "akka-actor"           % akkaV,
     "com.typesafe.akka"   %%  "akka-testkit"         % akkaV % "test",
-    "org.specs2"          %%  "specs2-core"          % "2.3.11" % "test",
-    "log4j"               %   "log4j"                % "1.2.14",
+    "com.typesafe.akka"   %%  "akka-slf4j"           % akkaV,
     "org.slf4j"           %   "slf4j-api"            % "1.7.10",
-    "org.slf4j"           %   "slf4j-log4j12"        % "1.7.10",
+    "ch.qos.logback"      %   "logback-classic"      % "1.1.3",
+    "org.specs2"          %%  "specs2-core"          % "2.3.11" % "test",
     "joda-time"           %   "joda-time"            % "2.7",
     "org.joda"            %   "joda-convert"         % "1.2")
 }

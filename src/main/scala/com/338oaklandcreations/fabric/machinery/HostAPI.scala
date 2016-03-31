@@ -64,19 +64,12 @@ class HostAPI extends Actor with ActorLogging {
   }
 
   def receive = {
-    case Settings(newTickInterval, newHoursToTrack) => {
+    case Settings(newTickInterval, newHoursToTrack) =>
       tickInterval = newTickInterval seconds;
-      hoursToTrack = newHoursToTrack hours;
-    }
-    case TimeSeriesRequestCPU => {
-      sender ! MetricHistory(cpuHistory)
-    }
-    case TimeSeriesRequestMemory => {
-      sender ! MetricHistory(memoryHistory)
-    }
-    case TimeSeriesRequestBattery => {
-      sender ! MetricHistory(batteryHistory)
-    }
+      hoursToTrack = newHoursToTrack hours
+    case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory)
+    case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory)
+    case TimeSeriesRequestBattery => sender ! MetricHistory(batteryHistory)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {
@@ -88,8 +81,6 @@ class HostAPI extends Actor with ActorLogging {
       cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
       memoryHistory = (memoryCountDouble :: memoryHistory).take (takeCount)
     }
-    case x => {
-      logger.info ("Unknown Command: " + x.toString())
-    }
+    case x => logger.info ("Unknown Command: " + x.toString())
   }
 }

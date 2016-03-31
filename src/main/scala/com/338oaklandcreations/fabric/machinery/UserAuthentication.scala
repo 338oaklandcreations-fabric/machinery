@@ -41,7 +41,7 @@ trait UserAuthentication {
 
   import UserAuthentication._
 
-  implicit val defaultTimeout = Timeout(30 seconds)
+  implicit val defaultTimeout = Timeout(3 seconds)
 
   val logger: Logger
 

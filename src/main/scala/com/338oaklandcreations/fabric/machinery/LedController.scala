@@ -26,77 +26,73 @@ import akka.io.{IO, Tcp}
 import akka.util.ByteString
 import org.slf4j.LoggerFactory
 
-object LedController {
-  def props(remote: InetSocketAddress, listener: ActorRef) = Props(classOf[LedController], remote, listener)
+import scala.concurrent.duration._
 
+object LedController {
+  def props(remote: InetSocketAddress) = Props(classOf[LedController], remote)
+
+  case object Tick
   case object NodeConnectionFailed
   case object NodeConnectionClosed
   case object NodeWriteFailed
 
+  case object HeartbeatRequest
+
   case class Pattern(patternId: Int)
 
+  val HeartbeatRequestString = "HB"
   val UTF_8 = "UTF-8"
 }
 
-class LedController(remote: InetSocketAddress, listener: ActorRef) extends Actor with ActorLogging {
+class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
 
   import LedController._
   import Tcp._
-  import context.system
+  import context._
 
   val logger = LoggerFactory.getLogger(getClass)
-  var connectionTestCount = 0
-  var connectionTestStart = 0L
-  val CONNECTION_TEST_LIMIT = 10
 
-  IO(Tcp) ! Connect(remote)
+  var lastHeartbeat: ByteString = null
+
+  var tickInterval = 5 seconds
+  val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
 
   def receive = {
     case CommandFailed(_: Connect) =>
-      logger.warn("Failed connect: " + self.path.name)
-      listener ! NodeConnectionFailed
-      context stop self
+      logger.warn("Failed connect to connect to LED Controller")
+      parent ! NodeConnectionFailed
     case c @ Connected(remote, local) =>
       logger.info("Connected: " + self.path.name)
-      listener ! c
-      val connection = sender()
+      parent ! c
+      val connection = sender
       connection ! Register(self)
-      connection ! Write(ByteString("X"))
-      context become connectionTest(connection)
-      connection ! Write(ByteString("P"))
-  }
-
-  def connectionTest(connection: ActorRef): Receive = {
-    case Received(data) =>
-      if (connectionTestCount > CONNECTION_TEST_LIMIT) {
-        val testTime = ((System.currentTimeMillis - connectionTestStart) / connectionTestCount)
-        logger.info("Round trip time: " + testTime + " ms")
-        context become connected(connection)
-      } else {
-        if (connectionTestCount == 0) connectionTestStart = System.currentTimeMillis
-        connectionTestCount = connectionTestCount + 1
-        connection ! Write(ByteString("P"))
-      }
+      context become connected(connection)
+    case Tick =>
+      IO(Tcp) ! Connect(remote)
   }
 
   def connected(connection: ActorRef): Receive = {
     case data: ByteString =>
-      logger.info("Send: " + data.decodeString(UTF_8))
+      logger.debug("Send: " + data.decodeString(UTF_8))
       connection ! Write(data)
     case CommandFailed(w: Write) =>
-      logger.info("Write Failed")
+      logger.warn("Write Failed")
       // O/S buffer was full
-      listener ! NodeWriteFailed
+      parent ! NodeWriteFailed
     case Received(data) =>
-      logger.info(self.path.name + ": " + data.decodeString(UTF_8))
-      listener ! data
+      logger.debug(self.path.name + ": " + data.toString)
+      lastHeartbeat = data
+    case Tick =>
+      connection ! Write(ByteString(HeartbeatRequestString))
+    case HeartbeatRequest =>
+      sender ! lastHeartbeat
     case "close" =>
       logger.info("close")
       connection ! Close
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
-      listener ! NodeConnectionClosed
-      context stop self
+      parent ! NodeConnectionClosed
+      context become receive
     case _ => logger.info("Unknown Message")
   }
 }

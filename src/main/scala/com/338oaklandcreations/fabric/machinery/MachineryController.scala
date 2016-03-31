@@ -22,7 +22,13 @@ package com._338oaklandcreations.fabric.machinery
 import java.net.InetSocketAddress
 
 import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
 import org.slf4j.LoggerFactory
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+import scala.util.{Failure, Success}
 
 object MachineryController {
 }
@@ -33,18 +39,30 @@ class MachineryController extends Actor with ActorLogging {
   import LedController._
   import context._
 
+  implicit val defaultTimeout = Timeout(3 seconds)
+
   val logger = LoggerFactory.getLogger(getClass)
 
   logger.info("Starting Controller")
 
-  val ledController = actorOf(Props(new LedController(new InetSocketAddress("0.0.0.0", 2590), self)), "ledController")
+  val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", 8888))), "ledController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
 
   def receive = {
     case Pattern(patternId) =>
     case TimeSeriesRequestCPU =>
+      val future = hostAPI ? TimeSeriesRequestCPU
+      val response = Await.result(future, 3 seconds)
+      sender ! response
     case TimeSeriesRequestMemory =>
-    case TimeSeriesRequestBattery =>
+      val future = hostAPI ? TimeSeriesRequestMemory
+      val response = Await.result(future, 3 seconds)
+      sender ! response
+    case HeartbeatRequest =>
+      val future = ledController ? HeartbeatRequest
+      val response = Await.result(future, 3 seconds)
+      sender ! response
+    case NodeConnectionClosed =>
     case _ => logger.debug("Received Unknown message")
   }
 
