@@ -25,34 +25,28 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.sys.process._
 
-/** Communication object for monitoring process statistics
-  *
-  * Collects processor statistics (e.g. CPU, free memory etc) for monitoring
-  */
 object HostAPI {
   case object Tick
   case object TimeSeriesRequestCPU
   case object TimeSeriesRequestMemory
-  case object TimeSeriesRequestBattery
+  case object HostStatisticsRequest
   case object Reboot
   case object Shutdown
 
   case class CommandResult(result: Int)
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
+  case class HostStatistics(startTime: String, cpuHistory: List[Double], memoryHistory: List[Double])
 }
-/** Communication object for monitoring process statistics
-  *
-  *  @constructor create a new process stats object
-  */
+
 class HostAPI extends Actor with ActorLogging {
 
   import HostAPI._
   import context._
 
-  var cpuHistory: List[Double] = List(0.0)
-  var memoryHistory: List[Double] = List(0.0)
-  var batteryHistory: List[Double] = List(0.0)
+  var cpuHistory: List[Double] = List()
+  var memoryHistory: List[Double] = List()
+  var startTime = ""
   var tickInterval = 5 seconds
   var hoursToTrack = 5 hours
   val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
@@ -69,7 +63,7 @@ class HostAPI extends Actor with ActorLogging {
       hoursToTrack = newHoursToTrack hours
     case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory)
     case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory)
-    case TimeSeriesRequestBattery => sender ! MetricHistory(batteryHistory)
+    case HostStatisticsRequest => sender ! HostStatistics(startTime, cpuHistory, memoryHistory)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {
@@ -77,6 +71,7 @@ class HostAPI extends Actor with ActorLogging {
       val cpuCountDouble: Double = cpuCount.toDouble
       val memoryCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!
       val memoryCountDouble: Double = memoryCount.toDouble
+      startTime = Process("bash" :: "-c" :: "ps aux | grep tcl | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
       memoryHistory = (memoryCountDouble :: memoryHistory).take (takeCount)

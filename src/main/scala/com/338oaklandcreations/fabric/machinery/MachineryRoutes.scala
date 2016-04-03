@@ -23,7 +23,6 @@ import java.net.InetAddress
 
 import akka.actor._
 import akka.pattern.ask
-import akka.util.ByteString
 import org.slf4j.LoggerFactory
 import spray.http.DateTime
 import spray.http.MediaTypes._
@@ -52,6 +51,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   import UserAuthentication._
   import MachineryJsonProtocol._
 
+
   val logger = LoggerFactory.getLogger(getClass)
   val system = ActorSystem("fabricSystem")
 
@@ -64,6 +64,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       getHostMemory ~
       getHostCPU ~
       getHeartbeat ~
+      getHostStatistics ~
+      enableLedPower ~
       shutdown ~
       reboot
 
@@ -150,11 +152,31 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         val future = controller ? HeartbeatRequest
         future onComplete {
           case Success(success) => success match {
-            case heartbeat: ByteString => ctx.complete(heartbeat.toString.toJson.toString)
+            case heartbeat: Heartbeat => ctx.complete(heartbeat.toJson(jsonFormat9(Heartbeat)).toString)
             case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
+      }
+    }
+  }
+  def getHostStatistics = get {
+    path("hostStatistics") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val future = controller ? HostStatisticsRequest
+        future onComplete {
+          case Success(success) => success match {
+            case heartbeat: HostStatistics => ctx.complete(heartbeat.toJson.toString)
+            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
+      }
+    }
+  }
+  def enableLedPower = post {
+    path("enableLedPower") {
+      respondWithMediaType(`application/json`) { ctx =>
       }
     }
   }

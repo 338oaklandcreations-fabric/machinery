@@ -24,6 +24,7 @@ import java.net.InetSocketAddress
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -35,11 +36,12 @@ object LedController {
   case object NodeConnectionFailed
   case object NodeConnectionClosed
   case object NodeWriteFailed
-
   case object HeartbeatRequest
-
+  case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, frameLocation: Int, currentPattern: Int,
+                       batteryVoltage: Int, frameRate: Int, memberType: Int, failedMessages: Int)
   case class Pattern(patternId: Int)
 
+  val HeartbeatLength = 11
   val HeartbeatRequestString = "HB"
   val UTF_8 = "UTF-8"
 }
@@ -52,18 +54,18 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  var lastHeartbeat: ByteString = null
+  var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0)
 
   var tickInterval = 5 seconds
-  val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
 
   def receive = {
     case CommandFailed(_: Connect) =>
       logger.warn("Failed connect to connect to LED Controller")
-      parent ! NodeConnectionFailed
+      context.parent ! NodeConnectionFailed
     case c @ Connected(remote, local) =>
       logger.info("Connected: " + self.path.name)
-      parent ! c
+      context.parent ! c
       val connection = sender
       connection ! Register(self)
       context become connected(connection)
@@ -78,20 +80,23 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
     case CommandFailed(w: Write) =>
       logger.warn("Write Failed")
       // O/S buffer was full
-      parent ! NodeWriteFailed
+      context.parent ! NodeWriteFailed
     case Received(data) =>
       logger.debug(self.path.name + ": " + data.toString)
-      lastHeartbeat = data
+      if (data.length == HeartbeatLength) {
+        lastHeartbeat = Heartbeat(new DateTime, data(0), data(1), data(2) * 256 + data(3), data(4),
+          data(5) * 256 + data(6), data(7), data(8), data(9) * 256 + data(10))
+      }
     case Tick =>
       connection ! Write(ByteString(HeartbeatRequestString))
     case HeartbeatRequest =>
-      sender ! lastHeartbeat
+      context.sender ! lastHeartbeat
     case "close" =>
       logger.info("close")
       connection ! Close
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
-      parent ! NodeConnectionClosed
+      context.parent ! NodeConnectionClosed
       context become receive
     case _ => logger.info("Unknown Message")
   }

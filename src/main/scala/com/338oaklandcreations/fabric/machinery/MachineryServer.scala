@@ -21,24 +21,29 @@ package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{Props, ActorSystem}
 import akka.io.IO
+import com.typesafe.config.ConfigFactory
 import spray.can.Http
 import akka.pattern.{ ask }
 import akka.util.Timeout
 import scala.concurrent.duration._
+import scala.util.Properties._
 
 object MachineryServer extends App {
 
-  def doMain() {
+  def doMain = {
 
     implicit val system = ActorSystem()
     implicit val timeout = Timeout(DurationInt(5).seconds)
 
+    val config = ConfigFactory.load
+    val portFromEnv = envOrElse("PORT", "") != ""
+    val port = envOrElse("PORT", config.getString("server.port"))
+
     val server = system.actorOf(Props[MachineryRoutesServiceActor], "MachineryRoutesServiceActor")
 
     if (args.length > 0) IO(Http) ? Http.Bind(server, "0.0.0.0", args(0).toInt)
-    //else IO(UHttp) ? Http.Bind(server, "localhost", 8100)
-    else IO(Http) ? Http.Bind(server, "0.0.0.0", 8100)
+    else IO(Http) ? Http.Bind(server, "0.0.0.0", port.toInt)
   }
 
-  doMain()
+  doMain
 }

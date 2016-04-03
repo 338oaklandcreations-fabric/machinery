@@ -86,4 +86,5 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
   implicit val commandResult = jsonFormat1(CommandResult)
   implicit val googleRowJSON = jsonFormat1(GoogleRow)
   implicit val googleTableJSON = jsonFormat2(GoogleTable)
+  implicit val hostStatistics = jsonFormat3(HostStatistics)
 }
