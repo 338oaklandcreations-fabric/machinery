@@ -61,9 +61,9 @@ class HostAPI extends Actor with ActorLogging {
     case Settings(newTickInterval, newHoursToTrack) =>
       tickInterval = newTickInterval seconds;
       hoursToTrack = newHoursToTrack hours
-    case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory)
-    case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory)
-    case HostStatisticsRequest => sender ! HostStatistics(startTime, cpuHistory, memoryHistory)
+    case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory.reverse)
+    case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory.reverse)
+    case HostStatisticsRequest => sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {
@@ -71,7 +71,7 @@ class HostAPI extends Actor with ActorLogging {
       val cpuCountDouble: Double = cpuCount.toDouble
       val memoryCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!
       val memoryCountDouble: Double = memoryCount.toDouble
-      startTime = Process("bash" :: "-c" :: "ps aux | grep tcl | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
+      startTime = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
       memoryHistory = (memoryCountDouble :: memoryHistory).take (takeCount)
