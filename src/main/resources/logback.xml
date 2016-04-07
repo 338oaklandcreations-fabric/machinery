@@ -11,7 +11,7 @@
             <pattern>%d{HH:mm:ss.SSS} [%p] [%c{0}] %m %n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>machinery_%i.log</fileNamePattern>
+            <fileNamePattern>logs/machinery_%i.log</fileNamePattern>
         </rollingPolicy>
         <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
             <maxFileSize>10MB</maxFileSize>

@@ -34,6 +34,7 @@ object HostAPI {
   case object Shutdown
 
   case class CommandResult(result: Int)
+  case class LedPower(on: Boolean)
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
   case class HostStatistics(startTime: String, cpuHistory: List[Double], memoryHistory: List[Double])
@@ -64,6 +65,7 @@ class HostAPI extends Actor with ActorLogging {
     case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory.reverse)
     case HostStatisticsRequest => sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse)
+    case LedPower(on) => sender ! CommandResult(0)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {

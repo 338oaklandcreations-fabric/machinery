@@ -65,7 +65,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       getHostCPU ~
       getHeartbeat ~
       getHostStatistics ~
-      enableLedPower ~
+      ledPower ~
       shutdown ~
       reboot
 
@@ -174,9 +174,17 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
-  def enableLedPower = post {
-    path("enableLedPower") {
+  def ledPower = post {
+    path("ledPower" / """(on|off)""".r) { (select) =>
       respondWithMediaType(`application/json`) { ctx =>
+        val future = controller ? LedPower(select == "on")
+        future onComplete {
+          case Success(success) => success match {
+            case result: CommandResult => ctx.complete(result.toJson.toString)
+            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
       }
     }
   }

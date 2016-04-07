@@ -66,6 +66,10 @@ class MachineryController extends Actor with ActorLogging {
       val future = ledController ? HeartbeatRequest
       val response = Await.result(future, 3 seconds)
       sender ! response
+    case LedPower(on) =>
+      val future = hostAPI ? LedPower(on)
+      val response = Await.result(future, 3 seconds)
+      sender ! response
     case NodeConnectionClosed =>
     case _ => logger.debug("Received Unknown message")
   }
