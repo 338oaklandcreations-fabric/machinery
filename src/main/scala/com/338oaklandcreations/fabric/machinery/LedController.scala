@@ -38,10 +38,10 @@ object LedController {
   case object NodeWriteFailed
   case object HeartbeatRequest
   case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, frameLocation: Int, currentPattern: Int,
-                       batteryVoltage: Int, frameRate: Int, memberType: Int, failedMessages: Int)
+                       batteryVoltage: Int, frameRate: Int, memberType: Int, failedMessages: Int, patternName: String)
   case class Pattern(patternId: Int)
 
-  val HeartbeatLength = 11
+  val HeartbeatLength = 11 + 20
   val HeartbeatRequestString = "HB"
   val UTF_8 = "UTF-8"
 }
@@ -54,7 +54,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0)
+  var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, "")
 
   var tickInterval = 5 seconds
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
@@ -85,7 +85,8 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       logger.debug(self.path.name + ": " + data.toString)
       if (data.length == HeartbeatLength) {
         lastHeartbeat = Heartbeat(new DateTime, data(0), data(1), data(2) * 256 + data(3), data(4),
-          data(5) * 256 + data(6), data(7), data(8), data(9) * 256 + data(10))
+          data(5) * 256 + data(6), data(7), data(8), data(9) * 256 + data(10),
+          new String(data.slice(11, 20).toArray))
       }
     case Tick =>
       connection ! Write(ByteString(HeartbeatRequestString))

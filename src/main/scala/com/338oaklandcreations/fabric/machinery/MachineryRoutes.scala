@@ -152,7 +152,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         val future = controller ? HeartbeatRequest
         future onComplete {
           case Success(success) => success match {
-            case heartbeat: Heartbeat => ctx.complete(heartbeat.toJson(jsonFormat9(Heartbeat)).toString)
+            case heartbeat: Heartbeat => ctx.complete(heartbeat.toJson(jsonFormat10(Heartbeat)).toString)
             case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
