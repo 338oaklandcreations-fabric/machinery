@@ -88,7 +88,9 @@ class HostAPI extends Actor with ActorLogging {
     case TimeSeriesRequestCPU => context.sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => context.sender ! MetricHistory(memoryHistory.reverse)
     case HostStatisticsRequest =>
+      logger.info("HostStatisticsRequest")
       val startTimeDate = ProcessTimeFormatter.parseDateTime(startTime)
+      logger.info("HostStatisticsRequest2")
       context.sender ! HostStatistics(startTimeDate, cpuHistory.reverse, memoryHistory.reverse)
     case LedPower(on) =>
       val pinValue = {
