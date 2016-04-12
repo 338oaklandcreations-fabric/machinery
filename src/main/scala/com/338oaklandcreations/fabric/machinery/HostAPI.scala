@@ -64,7 +64,9 @@ class HostAPI extends Actor with ActorLogging {
   val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
   val isArm = {
     val hosttype = envOrElse("HOSTTYPE", "")
-    logger.info(hosttype)
+    logger.info("HOSTTYPE=" + hosttype)
+    val hosttype2 = Process("bash" :: "-c" :: "echo $HOSTTYPE" :: Nil).!!
+    logger.info("HOSTTYPE=" + hosttype2)
     hosttype == "arm"
   }
 
