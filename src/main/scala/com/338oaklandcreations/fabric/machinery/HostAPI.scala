@@ -72,9 +72,12 @@ class HostAPI extends Actor with ActorLogging {
     logger.info("Starting HostAPI...")
     if (isArm) {
       logger.info("Starting GPIO for ledPower control...")
-      Process("bash" :: "-c" :: "sudo sh -c \"echo " + ledPowerPin + " > /sys/class/gpio/export\"" :: Nil).!!
-      Process("bash" :: "-c" :: "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\"" :: Nil).!!
-      Process("bash" :: "-c" :: "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\"" :: Nil).!!
+      val exportPin = Process("bash" :: "-c" :: "sudo sh -c \"echo " + ledPowerPin + " > /sys/class/gpio/export\"" :: Nil).!!
+      logger.info("Export pin:    " + exportPin)
+      val setDirection = Process("bash" :: "-c" :: "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\"" :: Nil).!!
+      logger.info("Set direction: " + setDirection)
+      val setValue = Process("bash" :: "-c" :: "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\"" :: Nil).!!
+      logger.info("Set value:     " + setValue)
     }
   }
 
