@@ -51,22 +51,27 @@ class MachineryController extends Actor with ActorLogging {
   def receive = {
     case Pattern(patternId) =>
     case TimeSeriesRequestCPU =>
+      logger.info("TimeSeriesRequestCPU")
       val future = hostAPI ? TimeSeriesRequestCPU
       val response = Await.result(future, 3 seconds)
       sender ! response
     case TimeSeriesRequestMemory =>
+      logger.info("TimeSeriesRequestMemory")
       val future = hostAPI ? TimeSeriesRequestMemory
       val response = Await.result(future, 3 seconds)
       sender ! response
     case HostStatisticsRequest =>
+      logger.info("HostStatisticsRequest")
       val future = hostAPI ? HostStatisticsRequest
       val response = Await.result(future, 3 seconds)
       sender ! response
     case HeartbeatRequest =>
+      logger.info("HeartbeatRequest")
       val future = ledController ? HeartbeatRequest
       val response = Await.result(future, 3 seconds)
       sender ! response
     case LedPower(on) =>
+      logger.info("LedPower")
       val future = hostAPI ? LedPower(on)
       val response = Await.result(future, 3 seconds)
       sender ! response
