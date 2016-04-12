@@ -87,23 +87,22 @@ class HostAPI extends Actor with ActorLogging {
       hoursToTrack = newHoursToTrack hours
     case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory.reverse)
-    case HostStatisticsRequest => {
+    case HostStatisticsRequest =>
       val startTimeDate = ProcessTimeFormatter.parseDateTime(startTime)
       sender ! HostStatistics(startTimeDate, cpuHistory.reverse, memoryHistory.reverse)
-    }
     case LedPower(on) =>
       val pinValue = {
-        if (isArm) {
-          val pinFile = new BufferedWriter(new FileWriter(ledPowerPinFilename + "/value"))
-          if (on) pinFile.write("1")
-          else pinFile.write("0")
-          pinFile.close
-          val pinValue = Process("bash" :: "-c" :: "cat " + ledPowerPinFilename + "/value" :: Nil).!!
-          logger.info(pinValue)
+//        if (isArm) {
+//          val pinFile = new BufferedWriter(new FileWriter(ledPowerPinFilename + "/value"))
+//          if (on) pinFile.write("1")
+//          else pinFile.write("0")
+//          pinFile.close
+//          val pinValue = Process("bash" :: "-c" :: "cat " + ledPowerPinFilename + "/value" :: Nil).!!
+//          logger.info("Pin value = " + pinValue)
           "1"
-        } else {
-          if (on) "1" else "0"
-        }
+//        } else {
+//          if (on) "1" else "0"
+//        }
       }
       sender ! CommandResult(pinValue.toInt)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
