@@ -61,13 +61,14 @@ class HostAPI extends Actor with ActorLogging {
   var hoursToTrack = 5 hours
   val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
   val ledPowerPin = "48"
-  val ledPowerPinFilename = "/sys/class/gpio/export/gpio" + ledPowerPin
+  val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
   val isArm = envOrElse("HOSTTYPE", "") == "arm"
 
   override def preStart(): Unit = {
-    logger.info("Starting ProcessStatistics")
+    logger.info("Starting ProcessStatistics...")
     if (isArm) {
-      Process("bash" :: "-c" :: "sudo sh -c \"echo " + ledPowerPin + " > " + ledPowerPinFilename + "\"" :: Nil).!!
+      logger.info("Starting GPIO for ledPower control...")
+      Process("bash" :: "-c" :: "sudo sh -c \"echo " + ledPowerPin + " > /sys/class/gpio/export\"" :: Nil).!!
       Process("bash" :: "-c" :: "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\"" :: Nil).!!
       Process("bash" :: "-c" :: "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\"" :: Nil).!!
     }
