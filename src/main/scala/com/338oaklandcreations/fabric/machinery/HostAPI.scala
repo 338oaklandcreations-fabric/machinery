@@ -58,7 +58,7 @@ class HostAPI extends Actor with ActorLogging {
   var startTime = ""
   var tickInterval = 5 seconds
   var hoursToTrack = 5 hours
-  val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
   val ledPowerPin = "48"
   val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
   val isArm = {
