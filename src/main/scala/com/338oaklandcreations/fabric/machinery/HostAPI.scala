@@ -19,8 +19,13 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import java.io.{FileWriter, BufferedWriter}
+
 import akka.actor.{Actor, ActorLogging}
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
+import scala.util.Properties._
 
 import scala.concurrent.duration._
 import scala.sys.process._
@@ -37,7 +42,9 @@ object HostAPI {
   case class LedPower(on: Boolean)
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
-  case class HostStatistics(startTime: String, cpuHistory: List[Double], memoryHistory: List[Double])
+  case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double])
+
+  val ProcessTimeFormatter = DateTimeFormat.forPattern("hh:mma")
 }
 
 class HostAPI extends Actor with ActorLogging {
@@ -45,17 +52,25 @@ class HostAPI extends Actor with ActorLogging {
   import HostAPI._
   import context._
 
+  val logger =  LoggerFactory.getLogger(getClass)
+
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
   var startTime = ""
   var tickInterval = 5 seconds
   var hoursToTrack = 5 hours
   val tickScheduler = system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
-
-  val logger =  LoggerFactory.getLogger(getClass)
+  val ledPowerPin = "48"
+  val ledPowerPinFilename = "/sys/class/gpio/export/gpio" + ledPowerPin
+  val isArm = envOrElse("HOSTTYPE", "") == "arm"
 
   override def preStart(): Unit = {
     logger.info("Starting ProcessStatistics")
+    if (isArm) {
+      Process("bash" :: "-c" :: "sudo sh -c \"echo " + ledPowerPin + " > " + ledPowerPinFilename + "\"" :: Nil).!!
+      Process("bash" :: "-c" :: "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\"" :: Nil).!!
+      Process("bash" :: "-c" :: "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\"" :: Nil).!!
+    }
   }
 
   def receive = {
@@ -64,16 +79,34 @@ class HostAPI extends Actor with ActorLogging {
       hoursToTrack = newHoursToTrack hours
     case TimeSeriesRequestCPU => sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => sender ! MetricHistory(memoryHistory.reverse)
-    case HostStatisticsRequest => sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse)
-    case LedPower(on) => sender ! CommandResult(0)
+    case HostStatisticsRequest => {
+      val startTimeDate = ProcessTimeFormatter.parseDateTime(startTime)
+      sender ! HostStatistics(startTimeDate, cpuHistory.reverse, memoryHistory.reverse)
+    }
+    case LedPower(on) =>
+      val pinValue = {
+        if (isArm) {
+          val pinFile = new BufferedWriter(new FileWriter(ledPowerPinFilename + "/value"))
+          if (on) pinFile.write("1")
+          else pinFile.write("0")
+          pinFile.close
+          Process("bash" :: "-c" :: "cat " + ledPowerPinFilename + "/value" :: Nil).!!
+        } else {
+          if (on) "1" else "0"
+        }
+      }
+      sender ! CommandResult(pinValue.toInt)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {
       val cpuCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $3} END {print sum}'" :: Nil).!!
-      val cpuCountDouble: Double = cpuCount.toDouble
+      val cpuCountDouble: Double = cpuCount.toDouble.min(100.0)
       val memoryCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!
-      val memoryCountDouble: Double = memoryCount.toDouble
+      val memoryCountDouble: Double = memoryCount.toDouble.min(100.0)
       startTime = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
+      if (startTime.contains("\n")) {
+        startTime = startTime.substring(0, startTime.indexOf("\n"))
+      }
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
       memoryHistory = (memoryCountDouble :: memoryHistory).take (takeCount)
