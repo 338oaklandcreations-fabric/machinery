@@ -50,7 +50,7 @@ object HostAPI {
 class HostAPI extends Actor with ActorLogging {
 
   import HostAPI._
-  import scala.concurrent.ExecutionContext.Implicits.global._
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   val logger =  LoggerFactory.getLogger(getClass)
 
