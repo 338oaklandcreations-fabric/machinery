@@ -115,9 +115,11 @@ class HostAPI extends Actor with ActorLogging {
       val memoryCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!
       val memoryCountDouble: Double = memoryCount.toDouble.min(100.0)
       startTime = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
+      logger.info("tick " + startTime)
       if (startTime.contains("\n")) {
         startTime = startTime.substring(0, startTime.indexOf("\n"))
       }
+      logger.info("tick2 " + startTime)
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
       memoryHistory = (memoryCountDouble :: memoryHistory).take (takeCount)
