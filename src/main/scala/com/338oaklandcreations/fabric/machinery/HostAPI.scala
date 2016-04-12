@@ -44,7 +44,15 @@ object HostAPI {
   case class MetricHistory(history: List[Double])
   case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double])
 
-  val ProcessTimeFormatter = DateTimeFormat.forPattern("hh:mma")
+  val isArm = {
+    val hosttype = Process("bash" :: "-c" :: "echo $HOSTTYPE" :: Nil).!!.replaceAll("\n", "")
+    hosttype == "arm"
+  }
+
+  val ProcessTimeFormatter = {
+    if (isArm) DateTimeFormat.forPattern("HH:mm")
+    else DateTimeFormat.forPattern("hh:mma")
+  }
 }
 
 class HostAPI extends Actor with ActorLogging {
@@ -62,11 +70,6 @@ class HostAPI extends Actor with ActorLogging {
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
   val ledPowerPin = "48"
   val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
-  val isArm = {
-    val hosttype = Process("bash" :: "-c" :: "echo $HOSTTYPE" :: Nil).!!.replaceAll("\n", "")
-    logger.info("HOSTTYPE=" + hosttype)
-    hosttype == "arm"
-  }
 
   override def preStart(): Unit = {
     logger.info("Starting HostAPI...")
@@ -119,6 +122,7 @@ class HostAPI extends Actor with ActorLogging {
       if (startTime.contains("\n")) {
         startTime = startTime.substring(0, startTime.indexOf("\n"))
       }
+      startTime = startTime.
       logger.info("tick2 " + startTime)
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
