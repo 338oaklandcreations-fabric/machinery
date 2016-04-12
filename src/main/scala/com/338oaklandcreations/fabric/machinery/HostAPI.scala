@@ -98,7 +98,9 @@ class HostAPI extends Actor with ActorLogging {
           if (on) pinFile.write("1")
           else pinFile.write("0")
           pinFile.close
-          Process("bash" :: "-c" :: "cat " + ledPowerPinFilename + "/value" :: Nil).!!
+          val pinValue = Process("bash" :: "-c" :: "cat " + ledPowerPinFilename + "/value" :: Nil).!!
+          logger.info(pinValue)
+          "1"
         } else {
           if (on) "1" else "0"
         }
