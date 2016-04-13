@@ -45,14 +45,15 @@ object HostAPI {
   case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double])
 
   val isArm = {
-    val hosttype = Process("bash" :: "-c" :: "echo $HOSTTYPE" :: Nil).!!.replaceAll("\n", "")
+    val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
     hosttype == "arm"
   }
 
   val ProcessTimeFormatter = {
-    if (isArm) DateTimeFormat.forPattern("HH:mm")
+    if (isArm) DateTimeFormat.forPattern("H:mm")
     else DateTimeFormat.forPattern("hh:mma")
   }
+  val MonthDayTimeFormatter = DateTimeFormat.forPattern("MMMdd")
 }
 
 class HostAPI extends Actor with ActorLogging {
@@ -64,9 +65,9 @@ class HostAPI extends Actor with ActorLogging {
 
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
-  var startTime = ""
+  var startTime: DateTime = null
   var tickInterval = 5 seconds
-  var hoursToTrack = 5 hours
+  var hoursToTrack = 6 hours
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
   val ledPowerPin = "48"
   val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
@@ -75,12 +76,31 @@ class HostAPI extends Actor with ActorLogging {
     logger.info("Starting HostAPI...")
     if (isArm) {
       logger.info("Starting GPIO for ledPower control...")
-      val exportPin = Process("bash" :: "-c" :: "sudo sh -c \"echo " + ledPowerPin + " > /sys/class/gpio/export\"" :: Nil).!!
-      logger.info("Export pin:    " + exportPin)
-      val setDirection = Process("bash" :: "-c" :: "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\"" :: Nil).!!
-      logger.info("Set direction: " + setDirection)
-      val setValue = Process("bash" :: "-c" :: "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\"" :: Nil).!!
-      logger.info("Set value:     " + setValue)
+      val enableCommand = "sudo sh -c \"echo " + ledPowerPin + " > /sys/class/gpio/export\""
+      logger.info("Enable ledPower pin...")
+      Process(Seq("bash", "-c", enableCommand)).!
+      val directionCommand = "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\""
+      logger.info("Direction for ledPower pin...")
+      Process(Seq("bash", "-c", directionCommand)).!
+      val valueCommand = "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\""
+      logger.info("Value for ledPower pin...")
+      Process(Seq("bash", "-c", valueCommand)).!
+    }
+  }
+
+  def currentCpu: Double = {
+    if (isArm) {
+      Process("bash" :: "-c" :: "mpstat | awk 'END {print $12}'" :: Nil).!!.toDouble.min(100.0)
+    } else {
+      Process("bash" :: "-c" :: "ps aux | awk '{sum += $3} END {print sum}'" :: Nil).!!.toDouble.min(100.0)
+    }
+  }
+
+  def currentMemory: Double = {
+    if (isArm) {
+      Process("bash" :: "-c" :: "free -m | awk 'FNR==2{print $3 / $2 * 100}'" :: Nil).!!.toDouble.min(100.0)
+    } else {
+      Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!.toDouble.min(100.0)
     }
   }
 
@@ -91,19 +111,14 @@ class HostAPI extends Actor with ActorLogging {
     case TimeSeriesRequestCPU => context.sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => context.sender ! MetricHistory(memoryHistory.reverse)
     case HostStatisticsRequest =>
-      logger.info("HostStatisticsRequest " + startTime)
-      val startTimeDate = ProcessTimeFormatter.parseDateTime(startTime)
-      logger.info("HostStatisticsRequest2")
-      context.sender ! HostStatistics(startTimeDate, cpuHistory.reverse, memoryHistory.reverse)
+      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse)
     case LedPower(on) =>
       val pinValue = {
         if (isArm) {
-          val pinFile = new BufferedWriter(new FileWriter(ledPowerPinFilename + "/value"))
-          if (on) pinFile.write("1")
-          else pinFile.write("0")
-          pinFile.close
-          val pinValue = Process("bash" :: "-c" :: "cat " + ledPowerPinFilename + "/value" :: Nil).!!
-          logger.info("Pin value = " + pinValue)
+          val value = if (on) "1" else "0"
+          val valueCommand = "sudo sh -c \"echo " + value + " > " + ledPowerPinFilename + "/value\""
+          Process(Seq("bash", "-c", valueCommand)).!
+          val pinValue = ("cat " + ledPowerPinFilename + "/value").!!.replaceAll("\n", "")
           pinValue
         } else {
           if (on) "1" else "0"
@@ -113,20 +128,26 @@ class HostAPI extends Actor with ActorLogging {
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case Tick => {
-      val cpuCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $3} END {print sum}'" :: Nil).!!
-      val cpuCountDouble: Double = cpuCount.toDouble.min(100.0)
-      val memoryCount = Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!
-      val memoryCountDouble: Double = memoryCount.toDouble.min(100.0)
-      startTime = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
-      logger.info("tick " + startTime)
-      if (startTime.contains("\n")) {
-        startTime = startTime.substring(0, startTime.indexOf("\n"))
+      val latestStartTime = {
+        val newStartString = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
+        if (newStartString.contains("\n")) {
+          newStartString.substring(0, newStartString.indexOf("\n")).replaceFirst("^0+(?!$)", "")
+        } else newStartString
       }
-      startTime = startTime.
-      logger.info("tick2 " + startTime)
+      if (startTime == null || ProcessTimeFormatter.print(startTime) != latestStartTime) {
+        try {
+          val processStartTime = ProcessTimeFormatter.parseDateTime(latestStartTime)
+          startTime = (new DateTime).withTime(processStartTime.getHourOfDay, processStartTime.getMinuteOfHour,
+            processStartTime.getSecondOfMinute, processStartTime.getMillisOfSecond)
+        } catch {
+          case e: IllegalArgumentException =>
+            startTime = MonthDayTimeFormatter.parseDateTime(latestStartTime)
+          case _: Throwable => startTime = new DateTime
+        }
+      }
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
-      cpuHistory = (cpuCountDouble :: cpuHistory).take (takeCount)
-      memoryHistory = (memoryCountDouble :: memoryHistory).take (takeCount)
+      cpuHistory = (currentCpu :: cpuHistory).take (takeCount)
+      memoryHistory = (currentMemory :: memoryHistory).take (takeCount)
     }
     case x => logger.info ("Unknown Command: " + x.toString())
   }
