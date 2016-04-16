@@ -19,14 +19,11 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.net.InetAddress
-
 import akka.actor._
 import akka.pattern.ask
 import org.slf4j.LoggerFactory
 import spray.http.DateTime
 import spray.http.MediaTypes._
-import spray.http.StatusCodes._
 import spray.json._
 import spray.routing._
 
@@ -48,8 +45,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
 
   import HostAPI._
   import LedController._
-  import UserAuthentication._
   import MachineryJsonProtocol._
+  import UserAuthentication._
 
 
   val logger = LoggerFactory.getLogger(getClass)
@@ -77,34 +74,12 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
     case AuthenticationRejection(message) :: _ => complete(400, message)
   }
 
-  val secureCookies: Boolean = {
-    // Don't require HTTPS if running in development
-    val hostname = InetAddress.getLocalHost.getHostName
-    hostname != "localhost" && !hostname.contains("pro")
-  }
-
-  def redirectToHttps: Directive0 = {
-    requestUri.flatMap { uri =>
-      redirect(uri.copy(scheme = "https"), MovedPermanently)
-    }
-  }
-
-  val isHttpsRequest: RequestContext => Boolean = { ctx =>
-    (ctx.request.uri.scheme == "https" || ctx.request.headers.exists(h => h.is("x-forwarded-proto") && h.value == "https")) && secureCookies
-  }
-
-  def enforceHttps: Directive0 = {
-    extract(isHttpsRequest).flatMap(
-      if (_) pass
-      else redirectToHttps
-    )
-  }
-
   val keyLifespanMillis = 120000 * 1000 // 2000 minutes
   val expiration = DateTime.now + keyLifespanMillis
   val SessionKey = "FABRIC_SESSION"
   val UserKey = "FABRIC_USER"
   val ResponseTextHeader = "{\"responseText\": "
+  val UnknownCommandResponseString = ResponseTextHeader + "\"Unknown command results\"}"
 
   def setPattern = post {
     path("pattern" / IntNumber) { (patternId) =>
@@ -113,7 +88,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(Pattern(pid)) => ctx.complete(Pattern(pid).toJson.toString)
           case Failure(x) => ctx.complete(400, x.toString)
-          case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+          case _ => ctx.complete(400, UnknownCommandResponseString)
         }
       }
     }
@@ -125,7 +100,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case history: MetricHistory => ctx.complete(history.toJson.toString)
-            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+            case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
@@ -139,7 +114,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case history: MetricHistory => ctx.complete(history.toJson.toString)
-            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+            case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
@@ -153,7 +128,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case heartbeat: Heartbeat => ctx.complete(heartbeat.toJson(jsonFormat10(Heartbeat)).toString)
-            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+            case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
@@ -167,7 +142,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case heartbeat: HostStatistics => ctx.complete(heartbeat.toJson.toString)
-            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+            case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
@@ -181,7 +156,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case result: CommandResult => ctx.complete(result.toJson.toString)
-            case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+            case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
@@ -194,7 +169,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       future onComplete {
         case Success(success) => success match {
           case response: CommandResult => ctx.complete(response.toJson.toString)
-          case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+          case _ => ctx.complete(400, UnknownCommandResponseString)
         }
         case Failure(failure) => ctx.complete(400, failure.toString)
       }
@@ -206,7 +181,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       future onComplete {
         case Success(success) => success match {
           case response: CommandResult => ctx.complete(response.toJson.toString)
-          case _ => ctx.complete(400, ResponseTextHeader + "\"Unknown command results\"}")
+          case _ => ctx.complete(400, UnknownCommandResponseString)
         }
         case Failure(failure) => ctx.complete(400, failure.toString)
       }

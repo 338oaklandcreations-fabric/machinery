@@ -25,7 +25,6 @@ import akka.actor.{Actor, ActorLogging}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
-import scala.util.Properties._
 
 import scala.concurrent.duration._
 import scala.sys.process._
@@ -141,7 +140,8 @@ class HostAPI extends Actor with ActorLogging {
             processStartTime.getSecondOfMinute, processStartTime.getMillisOfSecond)
         } catch {
           case e: IllegalArgumentException =>
-            startTime = MonthDayTimeFormatter.parseDateTime(latestStartTime)
+            val monthDayStartTime = MonthDayTimeFormatter.parseDateTime(latestStartTime)
+            startTime = startTime.withDate(monthDayStartTime.getYear, monthDayStartTime.getMonthOfYear, monthDayStartTime.getDayOfMonth)
           case _: Throwable => startTime = new DateTime
         }
       }
