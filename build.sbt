@@ -1,9 +1,13 @@
 import AssemblyKeys._
 import com.typesafe.sbt.SbtStartScript
+import scala.util.Properties._
 
 name := "Machinery"
 
-version := "0.0.1"
+val nextMinorVersion = (Process(Seq("cat", "minorVersion.txt")).!!.replaceAll("\n", "").toInt + 1).toString
+version := {
+  "0." + nextMinorVersion
+}
 
 scalaVersion := "2.11.7"
 
@@ -16,9 +20,6 @@ resolvers += "Spray" at "http://repo.spray.io"
 lazy val root = (project in file(".")).enablePlugins(SbtTwirl)
 
 seq(SbtStartScript.startScriptForClassesSettings: _*)
-
-resolvers += Resolver.ssh("", "10.0.1.23") as("mauricio")
-publishTo := Some(Resolver.file("file",  new File( "path/to/my/maven-repo/releases" )) )
 
 libraryDependencies ++= {
   val sprayV = "1.3.2"
@@ -39,3 +40,23 @@ libraryDependencies ++= {
 }
 
 Revolver.settings
+
+val deployTask = TaskKey[Unit]("deploy", "Copies assembly jar to remote location")
+
+deployTask <<= assembly map { (asm) =>
+  val targetDir = envOrElse("FABRIC_JAR_TARGET_DIR", "")
+  val account = envOrElse("FABRIC_EMBEDDED_SERVER", "")
+  val jarName = asm.getName
+  val src = "./target/scala-2.11/" + jarName
+  val target = targetDir + jarName
+  val target_abs = account + ":" + target
+  Process(Seq("scp", src, target_abs)).!
+  Process(Seq("bash", "-c", "echo " + nextMinorVersion + " > minorVersion.txt")).!
+
+  // Optional. Create symbolic link to last version
+  val symlink = targetDir + "Machinery-assembly.jar"
+  println("Symlinking it to  " + symlink)
+  val cmd = "ln -sf " + target + " " + symlink
+  Process(Seq("ssh", account, cmd)).!
+}
+

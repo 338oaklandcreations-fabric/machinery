@@ -17,7 +17,7 @@
 
 */
 
-package com.338oaklandcreations.fabric.machinery
+package com._338oaklandcreations.fabric.machinery
 
 import java.security.{SecureRandom, KeyStore}
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}

@@ -2,7 +2,6 @@
 *.log
 .DS_Store
 .idea
-deployBB.sh
 
 # sbt specific
 .cache
