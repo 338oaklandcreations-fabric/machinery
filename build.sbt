@@ -17,6 +17,9 @@ lazy val root = (project in file(".")).enablePlugins(SbtTwirl)
 
 seq(SbtStartScript.startScriptForClassesSettings: _*)
 
+resolvers += Resolver.ssh("", "10.0.1.23") as("mauricio")
+publishTo := Some(Resolver.file("file",  new File( "path/to/my/maven-repo/releases" )) )
+
 libraryDependencies ++= {
   val sprayV = "1.3.2"
   val akkaV = "2.3.6"
