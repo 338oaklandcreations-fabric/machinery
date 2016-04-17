@@ -25,7 +25,6 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
 import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -38,9 +37,11 @@ object LedController {
   case object NodeConnectionClosed
   case object NodeWriteFailed
   case object HeartbeatRequest
+  case object LedControllerVersionRequest
   case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, frameLocation: Int, currentPattern: Int,
                        batteryVoltage: Int, frameRate: Int, memberType: Int, failedMessages: Int, patternName: String)
   case class Pattern(patternId: Int)
+  case class LedControllerVersion(versionId: String, buildTime: String)
 
   val HeartbeatLength = 11
   val HeartbeatPatternNameLength = 11
@@ -72,6 +73,8 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       val connection = sender
       connection ! Register(self)
       context become connected(connection)
+    case LedControllerVersionRequest =>
+      context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
     case Tick =>
       IO(Tcp) ! Connect(remote)
   }
@@ -95,6 +98,8 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       connection ! Write(ByteString(HeartbeatRequestString))
     case HeartbeatRequest =>
       context.sender ! lastHeartbeat
+    case LedControllerVersionRequest =>
+      context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
     case "close" =>
       logger.info("close")
       connection ! Close

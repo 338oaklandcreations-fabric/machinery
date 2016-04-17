@@ -19,8 +19,6 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.io.{FileWriter, BufferedWriter}
-
 import akka.actor.{Actor, ActorLogging}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -58,6 +56,7 @@ object HostAPI {
 class HostAPI extends Actor with ActorLogging {
 
   import HostAPI._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val logger =  LoggerFactory.getLogger(getClass)

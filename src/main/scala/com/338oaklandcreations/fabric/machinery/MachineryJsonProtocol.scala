@@ -25,6 +25,8 @@ import spray.json._
 
 object MachineryJsonProtocol extends DefaultJsonProtocol {
 
+  case class ServerVersion(version: String, scalaVersion: String, builtAt: String)
+
   class GoogleCell(val v: Any) {}
   class GoogleColumn(val id: String, val label: String, val typeName: String) {}
   class GoogleTooltipColumn() extends GoogleColumn("", "", "") {}
@@ -87,4 +89,7 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
   implicit val googleRowJSON = jsonFormat1(GoogleRow)
   implicit val googleTableJSON = jsonFormat2(GoogleTable)
   implicit val hostStatistics = jsonFormat3(HostStatistics)
+  implicit val ledControllerVersion = jsonFormat2(LedControllerVersion)
+  implicit val serverVersion = jsonFormat3(ServerVersion)
+
 }

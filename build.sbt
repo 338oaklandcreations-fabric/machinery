@@ -1,5 +1,4 @@
 import AssemblyKeys._
-import com.typesafe.sbt.SbtStartScript
 import scala.util.Properties._
 
 name := "Machinery"
@@ -17,9 +16,13 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 resolvers += "Spray" at "http://repo.spray.io"
 
-lazy val root = (project in file(".")).enablePlugins(SbtTwirl)
-
-seq(SbtStartScript.startScriptForClassesSettings: _*)
+lazy val root = (project in file(".")).
+  enablePlugins(BuildInfoPlugin).
+  settings(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com._338oaklandcreations.fabric.machinery",
+    buildInfoOptions += BuildInfoOption.BuildTime
+)
 
 libraryDependencies ++= {
   val sprayV = "1.3.2"

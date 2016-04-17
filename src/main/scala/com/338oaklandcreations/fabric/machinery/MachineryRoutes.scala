@@ -48,7 +48,6 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   import MachineryJsonProtocol._
   import UserAuthentication._
 
-
   val logger = LoggerFactory.getLogger(getClass)
   val system = ActorSystem("fabricSystem")
 
@@ -64,7 +63,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       getHostStatistics ~
       ledPower ~
       shutdown ~
-      reboot
+      reboot ~
+      versions
 
   val authenticationRejection = RejectionHandler {
     case AuthenticationRejection(message) :: _ => complete(400, message)
@@ -160,6 +160,21 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
+      }
+    }
+  }
+  def versions = get {
+    pathPrefix("version") {
+      path("ledController") { ctx =>
+        controller ? LedControllerVersionRequest onComplete {
+          case Success(success) => success match {
+            case response: LedControllerVersion => ctx.complete(response.toJson.toString)
+            case _ => ctx.complete(400, UnknownCommandResponseString)
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
+      } ~ path("server") { ctx =>
+        ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, BuildInfo.builtAtString).toJson.toString)
       }
     }
   }
