@@ -34,9 +34,6 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
   case class GoogleRow(c: List[GoogleCell])
   case class GoogleTable(cols: List[GoogleColumn], rows: List[GoogleRow])
 
-  import LedController._
-  import HostAPI._
-
   implicit object DateJsonFormat extends RootJsonFormat[DateTime] {
     private val parserISO: DateTimeFormatter = ISODateTimeFormat.dateTimeNoMillis()
     private val parserMillisISO: DateTimeFormatter = ISODateTimeFormat.dateTime()
@@ -82,14 +79,19 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
     }
   }
 
+  import LedController._
+  import HostAPI._
+
   // Base case classes
-  implicit val pattern = jsonFormat1(Pattern)
-  implicit val metricHisotry = jsonFormat1(MetricHistory)
-  implicit val commandResult = jsonFormat1(CommandResult)
   implicit val googleRowJSON = jsonFormat1(GoogleRow)
   implicit val googleTableJSON = jsonFormat2(GoogleTable)
+
+  implicit val pattern = jsonFormat1(Pattern)
+  implicit val metricHistory = jsonFormat1(MetricHistory)
+  implicit val commandResult = jsonFormat1(CommandResult)
   implicit val hostStatistics = jsonFormat3(HostStatistics)
   implicit val ledControllerVersion = jsonFormat2(LedControllerVersion)
   implicit val serverVersion = jsonFormat3(ServerVersion)
+  implicit val patternNames = jsonFormat1(PatternNames)
 
 }

@@ -23,7 +23,10 @@ import java.net.InetSocketAddress
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
-import akka.util.ByteString
+import akka.util.{ByteString, Timeout}
+import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg.Command
+import com._338oaklandcreations.fabric.machinery.FabricProtos.{FabricWrapperMessage, CommandMessage}
+import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
@@ -38,15 +41,23 @@ object LedController {
   case object NodeWriteFailed
   case object HeartbeatRequest
   case object LedControllerVersionRequest
+  case object PatternNamesRequest
+
   case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, frameLocation: Int, currentPattern: Int,
                        batteryVoltage: Int, frameRate: Int, memberType: Int, failedMessages: Int, patternName: String)
   case class Pattern(patternId: Int)
   case class LedControllerVersion(versionId: String, buildTime: String)
+  case class PatternNames(names: List[String])
+  case class PatternSelect(id: Int, red: Int, green: Int, blue: Int, speed: Int, intensity: Int)
+
+  val MessageHeartbeatRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(CommandMessage.CommandList.PROTOBUF_HEARTBEAT)).toByteArray)
+  val MessagePatternNamesRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(CommandMessage.CommandList.PROTOBUF_PATTERN_NAMES)).toByteArray)
 
   val HeartbeatLength = 11
   val HeartbeatPatternNameLength = 11
   val HeartbeatTotalLength = HeartbeatLength + HeartbeatPatternNameLength
   val HeartbeatRequestString = "HB"
+  val PatternNameRequestString = "PN"
   val UTF_8 = "UTF-8"
 }
 
@@ -56,9 +67,13 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   import Tcp._
   import context._
 
+  implicit val defaultTimeout = Timeout(3 seconds)
+
   val logger = LoggerFactory.getLogger(getClass)
 
   var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, "")
+  var lastPatternNames = PatternNames(List())
+  var ledControllerVersion = LedControllerVersion("", "")
 
   var tickInterval = 5 seconds
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
@@ -69,9 +84,9 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       context.parent ! NodeConnectionFailed
     case c @ Connected(remote, local) =>
       logger.info("Connected: " + self.path.name)
-      context.parent ! c
       val connection = sender
       connection ! Register(self)
+      context.system.scheduler.scheduleOnce (1000 milliseconds, self, PatternNamesRequest)
       context become connected(connection)
     case LedControllerVersionRequest =>
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
@@ -88,25 +103,39 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       // O/S buffer was full
       context.parent ! NodeWriteFailed
     case Received(data) =>
-      logger.debug(self.path.name + ": " + data.toString)
-      if (data.length <= HeartbeatTotalLength) {
-        lastHeartbeat = Heartbeat(new DateTime, data(0).toInt, data(1).toInt, data(2).toInt * 256 + data(3).toInt, data(4).toInt,
-          data(5).toInt * 256 + data(6).toInt, data(7).toInt, data(8).toInt, data(9).toInt * 256 + data(10).toInt,
-          new String(data.slice(11, data.length - 1).toArray))
+      val wrapperMessage = FabricProtos.FabricWrapperMessage.parseFrom(data.toArray)
+      wrapperMessage.msg match {
+        case Msg.Heartbeat(hb) =>
+          lastHeartbeat = Heartbeat(new DateTime, hb.messageTypeID,
+            hb.versionID, hb.frameLocation.get, hb.currentPattern, hb.batteryVoltage.get, hb.frameRate.get,
+            hb.memberType, hb.failedMessages.get, hb.currentPatternName)
+          logger.info (lastHeartbeat.toString)
+        case Msg.PatternNames(pn) =>
+          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => i.toString + " " + n}))
+          logger.info (lastPatternNames.toString)
+        case Msg.Welcome(welcome) =>
+          ledControllerVersion = LedControllerVersion(welcome.buildTime, welcome.version)
+          logger.info (ledControllerVersion.toString)
+        case Msg.Empty =>
       }
     case Tick =>
-      connection ! Write(ByteString(HeartbeatRequestString))
+      connection ! Write(MessageHeartbeatRequest)
     case HeartbeatRequest =>
       context.sender ! lastHeartbeat
     case LedControllerVersionRequest =>
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
+    case PatternNamesRequest =>
+      if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
+      if (context.sender != self) context.sender ! lastPatternNames
     case "close" =>
       logger.info("close")
       connection ! Close
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
+      lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, "")
+      lastPatternNames = PatternNames(List())
       context.parent ! NodeConnectionClosed
       context become receive
-    case _ => logger.info("Unknown Message")
+    case unknown => logger.info("Unknown Message " + unknown.toString)
   }
 }

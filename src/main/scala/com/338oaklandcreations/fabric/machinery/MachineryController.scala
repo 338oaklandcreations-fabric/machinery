@@ -52,36 +52,27 @@ class MachineryController extends Actor with ActorLogging {
     case Pattern(patternId) =>
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
-      val future = hostAPI ? TimeSeriesRequestCPU
-      val response = Await.result(future, 3 seconds)
-      sender ! response
+      hostAPI forward TimeSeriesRequestCPU
     case TimeSeriesRequestMemory =>
       logger.debug("TimeSeriesRequestMemory")
-      val future = hostAPI ? TimeSeriesRequestMemory
-      val response = Await.result(future, 3 seconds)
-      sender ! response
+      hostAPI forward TimeSeriesRequestMemory
     case HostStatisticsRequest =>
       logger.debug("HostStatisticsRequest")
-      val future = hostAPI ? HostStatisticsRequest
-      val response = Await.result(future, 3 seconds)
-      sender ! response
+      hostAPI forward HostStatisticsRequest
     case HeartbeatRequest =>
       logger.debug("HeartbeatRequest")
-      val future = ledController ? HeartbeatRequest
-      val response = Await.result(future, 3 seconds)
-      sender ! response
+      ledController forward HeartbeatRequest
     case LedPower(on) =>
       logger.debug("LedPower")
-      val future = hostAPI ? LedPower(on)
-      val response = Await.result(future, 3 seconds)
-      sender ! response
+      hostAPI forward LedPower(on)
     case LedControllerVersionRequest =>
       logger.debug("LedControllerVersionRequest")
-      val future = ledController ? LedControllerVersionRequest
-      val response = Await.result(future, 3 seconds)
-      sender ! response
+      ledController forward LedControllerVersionRequest
+    case PatternNamesRequest =>
+      logger.debug("PatternNamesRequest")
+      ledController forward PatternNamesRequest
     case NodeConnectionClosed =>
-    case _ => logger.debug("Received Unknown message")
+    case unknown => logger.debug("Received Unknown message: " + unknown.toString)
   }
 
 }

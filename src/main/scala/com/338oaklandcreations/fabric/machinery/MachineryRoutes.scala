@@ -57,14 +57,15 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
 
   val routes =
     setPattern ~
-      getHostMemory ~
-      getHostCPU ~
-      getHeartbeat ~
-      getHostStatistics ~
+      hostMemory ~
+      hostCPU ~
+      heartbeat ~
+      hostStatistics ~
       ledPower ~
       shutdown ~
       reboot ~
-      versions
+      versions ~
+      patternNames
 
   val authenticationRejection = RejectionHandler {
     case AuthenticationRejection(message) :: _ => complete(400, message)
@@ -93,7 +94,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
-  def getHostMemory = get {
+  def hostMemory = get {
     path("hostMemory") {
       respondWithMediaType(`application/json`) { ctx =>
         val future = controller ? TimeSeriesRequestMemory
@@ -107,7 +108,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
-  def getHostCPU = get {
+  def hostCPU = get {
     path("hostCPU") {
       respondWithMediaType(`application/json`) { ctx =>
         val future = controller ? TimeSeriesRequestCPU
@@ -121,7 +122,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
-  def getHeartbeat = get {
+  def heartbeat = get {
     path("heartbeat") {
       respondWithMediaType(`application/json`) { ctx =>
         val future = controller ? HeartbeatRequest
@@ -135,13 +136,13 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
-  def getHostStatistics = get {
+  def hostStatistics = get {
     path("hostStatistics") {
       respondWithMediaType(`application/json`) { ctx =>
         val future = controller ? HostStatisticsRequest
         future onComplete {
           case Success(success) => success match {
-            case heartbeat: HostStatistics => ctx.complete(heartbeat.toJson.toString)
+            case statistics: HostStatistics => ctx.complete(statistics.toJson(jsonFormat3(HostStatistics)).toString)
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
@@ -156,6 +157,20 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         future onComplete {
           case Success(success) => success match {
             case result: CommandResult => ctx.complete(result.toJson.toString)
+            case _ => ctx.complete(400, UnknownCommandResponseString)
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
+      }
+    }
+  }
+  def patternNames = get {
+    path("patternNames") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val future = controller ? PatternNamesRequest
+        future onComplete {
+          case Success(success) => success match {
+            case patternNames: PatternNames => ctx.complete(patternNames.toJson(jsonFormat1(PatternNames)).toString)
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)

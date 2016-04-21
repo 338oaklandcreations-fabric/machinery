@@ -1,5 +1,8 @@
 import AssemblyKeys._
 import scala.util.Properties._
+import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
+
+PB.protobufSettings
 
 name := "Machinery"
 
