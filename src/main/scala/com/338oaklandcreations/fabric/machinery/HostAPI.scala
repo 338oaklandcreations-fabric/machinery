@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 import scala.sys.process._
 
 object HostAPI {
-  case object Tick
+  case object HostTick
   case object TimeSeriesRequestCPU
   case object TimeSeriesRequestMemory
   case object HostStatisticsRequest
@@ -66,7 +66,7 @@ class HostAPI extends Actor with ActorLogging {
   var startTime: DateTime = null
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
-  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val ledPowerPin = "48"
   val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
 
@@ -125,7 +125,7 @@ class HostAPI extends Actor with ActorLogging {
       context.sender ! CommandResult(pinValue.toInt)
     case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
-    case Tick => {
+    case HostTick => {
       val latestStartTime = {
         val newStartString = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
         if (newStartString.contains("\n")) {

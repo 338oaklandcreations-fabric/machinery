@@ -19,6 +19,8 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import HostAPI._
+import LedController._
 import org.joda.time.DateTime
 import org.joda.time.format.{ISODateTimeFormat, DateTimeFormatter}
 import spray.json._
@@ -27,18 +29,13 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
 
   case class ServerVersion(version: String, scalaVersion: String, builtAt: String)
 
-  class GoogleCell(val v: Any) {}
-  class GoogleColumn(val id: String, val label: String, val typeName: String) {}
-  class GoogleTooltipColumn() extends GoogleColumn("", "", "") {}
-
-  case class GoogleRow(c: List[GoogleCell])
-  case class GoogleTable(cols: List[GoogleColumn], rows: List[GoogleRow])
-
   implicit object DateJsonFormat extends RootJsonFormat[DateTime] {
     private val parserISO: DateTimeFormatter = ISODateTimeFormat.dateTimeNoMillis()
     private val parserMillisISO: DateTimeFormatter = ISODateTimeFormat.dateTime()
+
     override def write(obj: DateTime) = JsString(parserISO.print(obj))
-    override def read(json: JsValue) : DateTime = json match {
+
+    override def read(json: JsValue): DateTime = json match {
       case JsString(s) =>
         try {
           parserISO.parseDateTime(s)
@@ -49,49 +46,17 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
     }
   }
 
-  implicit object GoogleCellFormat extends RootJsonFormat[GoogleCell] {
-    def write(c: GoogleCell) = c.v match {
-      case x: String => JsObject("v" -> JsString(x))
-      case x: Int    => JsObject("v" -> JsNumber(x))
-      case x: Double => JsObject("v" -> JsNumber(x))
-      // TODO: Handle other basic types (e.g. Date)
-    }
-    def read(value: JsValue) = value match {
-      case _ => deserializationError("Undefined Read")
-      // TODO: Provide read functionality
-    }
-  }
-
-  implicit object GoogleColumnFormat extends RootJsonFormat[GoogleColumn] {
-    def write(c: GoogleColumn) = {
-      c match {
-        case x: GoogleTooltipColumn => JsObject("type" -> JsString("string"), "role" -> JsString("tooltip"), "p" -> JsObject("html" -> JsBoolean(true)))
-        case _ => JsObject(
-          "id" -> JsString(c.id),
-          "label" -> JsString(c.label),
-          "type" -> JsString(c.typeName) // Required because `type' is a reserved word in Scala
-        )
-      }
-    }
-    def read(value: JsValue) = value match {
-      case _ => deserializationError("Undefined Read")
-      // TODO: Provide read functionality
-    }
-  }
-
-  import LedController._
-  import HostAPI._
-
   // Base case classes
-  implicit val googleRowJSON = jsonFormat1(GoogleRow)
-  implicit val googleTableJSON = jsonFormat2(GoogleTable)
 
-  implicit val pattern = jsonFormat1(Pattern)
-  implicit val metricHistory = jsonFormat1(MetricHistory)
-  implicit val commandResult = jsonFormat1(CommandResult)
-  implicit val hostStatistics = jsonFormat3(HostStatistics)
-  implicit val ledControllerVersion = jsonFormat2(LedControllerVersion)
-  implicit val serverVersion = jsonFormat3(ServerVersion)
-  implicit val patternNames = jsonFormat1(PatternNames)
+  implicit val serverVersionJson = jsonFormat3(ServerVersion)
+  implicit val metricHistoryJson = jsonFormat1(MetricHistory)
+  implicit val hostStatisticsJson = jsonFormat3(HostStatistics)
+  implicit val commandResultJson = jsonFormat1(CommandResult)
+
+  implicit val heartbeatJson = jsonFormat10(Heartbeat)
+  implicit val patternNamesJson = jsonFormat1(PatternNames)
+  implicit val patternSelectJson = jsonFormat6(PatternSelect)
+  implicit val patternJson = jsonFormat1(Pattern)
+  implicit val ledControllerVersionJson = jsonFormat2(LedControllerVersion)
 
 }

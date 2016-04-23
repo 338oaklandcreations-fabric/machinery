@@ -24,7 +24,6 @@ import akka.pattern.ask
 import org.slf4j.LoggerFactory
 import spray.http.DateTime
 import spray.http.MediaTypes._
-import spray.json._
 import spray.routing._
 
 import scala.util.{Failure, Success}
@@ -43,6 +42,7 @@ class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
 
 trait MachineryRoutes extends HttpService with UserAuthentication {
 
+  import spray.json._
   import HostAPI._
   import LedController._
   import MachineryJsonProtocol._
@@ -56,8 +56,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   val controller = system.actorOf(Props[MachineryController], "MachineryController")
 
   val routes =
-    setPattern ~
-      hostMemory ~
+    hostMemory ~
       hostCPU ~
       heartbeat ~
       hostStatistics ~
@@ -65,6 +64,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       shutdown ~
       reboot ~
       versions ~
+      setPattern ~
       patternNames
 
   val authenticationRejection = RejectionHandler {
@@ -82,18 +82,6 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   val ResponseTextHeader = "{\"responseText\": "
   val UnknownCommandResponseString = ResponseTextHeader + "\"Unknown command results\"}"
 
-  def setPattern = post {
-    path("pattern" / IntNumber) { (patternId) =>
-      respondWithMediaType(`application/json`) { ctx =>
-        val future = controller ? Pattern(patternId)
-        future onComplete {
-          case Success(Pattern(pid)) => ctx.complete(Pattern(pid).toJson.toString)
-          case Failure(x) => ctx.complete(400, x.toString)
-          case _ => ctx.complete(400, UnknownCommandResponseString)
-        }
-      }
-    }
-  }
   def hostMemory = get {
     path("hostMemory") {
       respondWithMediaType(`application/json`) { ctx =>
@@ -128,7 +116,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         val future = controller ? HeartbeatRequest
         future onComplete {
           case Success(success) => success match {
-            case heartbeat: Heartbeat => ctx.complete(heartbeat.toJson(jsonFormat10(Heartbeat)).toString)
+            case heartbeat: Heartbeat => ctx.complete(heartbeat.toJson.toString)
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
@@ -142,7 +130,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         val future = controller ? HostStatisticsRequest
         future onComplete {
           case Success(success) => success match {
-            case statistics: HostStatistics => ctx.complete(statistics.toJson(jsonFormat3(HostStatistics)).toString)
+            case statistics: HostStatistics => ctx.complete(statistics.toJson.toString)
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
@@ -164,13 +152,22 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
+  def setPattern = post {
+    path("pattern") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val patternSelect = ctx.request.entity.data.asString.parseJson.convertTo[PatternSelect]
+        controller ! patternSelect
+        ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
   def patternNames = get {
-    path("patternNames") {
+    path("pattern" / "names") {
       respondWithMediaType(`application/json`) { ctx =>
         val future = controller ? PatternNamesRequest
         future onComplete {
           case Success(success) => success match {
-            case patternNames: PatternNames => ctx.complete(patternNames.toJson(jsonFormat1(PatternNames)).toString)
+            case patternNamesResult: PatternNames => ctx.complete(patternNamesResult.toJson.toString)
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)

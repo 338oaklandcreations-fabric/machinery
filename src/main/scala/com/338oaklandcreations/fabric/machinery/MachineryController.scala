@@ -71,6 +71,9 @@ class MachineryController extends Actor with ActorLogging {
     case PatternNamesRequest =>
       logger.debug("PatternNamesRequest")
       ledController forward PatternNamesRequest
+    case select: PatternSelect =>
+      logger.debug("PatternSelect")
+      ledController forward select
     case NodeConnectionClosed =>
     case unknown => logger.debug("Received Unknown message: " + unknown.toString)
   }

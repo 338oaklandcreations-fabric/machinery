@@ -24,9 +24,8 @@ import java.net.InetSocketAddress
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
 import akka.util.{ByteString, Timeout}
-import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg.Command
-import com._338oaklandcreations.fabric.machinery.FabricProtos.{FabricWrapperMessage, CommandMessage}
 import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg
+import com._338oaklandcreations.fabric.machinery.FabricProtos.{PatternCommand, CommandMessage, FabricWrapperMessage}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
@@ -35,7 +34,7 @@ import scala.concurrent.duration._
 object LedController {
   def props(remote: InetSocketAddress) = Props(classOf[LedController], remote)
 
-  case object Tick
+  case object LedControllerTick
   case object NodeConnectionFailed
   case object NodeConnectionClosed
   case object NodeWriteFailed
@@ -76,7 +75,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   var ledControllerVersion = LedControllerVersion("", "")
 
   var tickInterval = 5 seconds
-  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, Tick)
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, LedControllerTick)
 
   def receive = {
     case CommandFailed(_: Connect) =>
@@ -90,7 +89,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       context become connected(connection)
     case LedControllerVersionRequest =>
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
-    case Tick =>
+    case LedControllerTick =>
       IO(Tcp) ! Connect(remote)
   }
 
@@ -111,14 +110,14 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
             hb.memberType, hb.failedMessages.get, hb.currentPatternName)
           logger.info (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
-          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => i.toString + " " + n}))
+          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => (i + 1).toString + " " + n}))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
           ledControllerVersion = LedControllerVersion(welcome.buildTime, welcome.version)
           logger.info (ledControllerVersion.toString)
         case Msg.Empty =>
       }
-    case Tick =>
+    case LedControllerTick =>
       connection ! Write(MessageHeartbeatRequest)
     case HeartbeatRequest =>
       context.sender ! lastHeartbeat
@@ -127,6 +126,10 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
     case PatternNamesRequest =>
       if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
       if (context.sender != self) context.sender ! lastPatternNames
+    case select: PatternSelect =>
+      val selectMessage = PatternCommand(select.id, select.speed, select.intensity, select.red, select.green, select.blue)
+      val selectProtobuf = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(selectMessage).toByteArray)
+      connection ! Write(selectProtobuf)
     case "close" =>
       logger.info("close")
       connection ! Close
