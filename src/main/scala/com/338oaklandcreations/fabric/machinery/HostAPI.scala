@@ -39,7 +39,8 @@ object HostAPI {
   case class LedPower(on: Boolean)
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
-  case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double])
+  case class ConcerningMessages(logfile: String, warn: Int, error: Int, fatal: Int)
+  case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double], concerning: List[ConcerningMessages])
 
   val isArm = {
     val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
@@ -102,6 +103,17 @@ class HostAPI extends Actor with ActorLogging {
     }
   }
 
+  def concerningMessages: List[ConcerningMessages] = {
+    if (isArm) {
+      List("furSwarmLinux.log", "tcl_server.log", "machinery.log").map { file =>
+        val warn = Process("bash" :: "-c" :: "grep 'WARN' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
+        val error = Process("bash" :: "-c" :: "grep 'ERROR' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
+        val fatal = Process("bash" :: "-c" :: "grep 'FATAL' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
+        ConcerningMessages(file, warn, error, fatal)
+      }
+    } else List()
+  }
+
   def receive = {
     case Settings(newTickInterval, newHoursToTrack) =>
       tickInterval = newTickInterval seconds;
@@ -109,7 +121,7 @@ class HostAPI extends Actor with ActorLogging {
     case TimeSeriesRequestCPU => context.sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => context.sender ! MetricHistory(memoryHistory.reverse)
     case HostStatisticsRequest =>
-      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse)
+      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse, concerningMessages)
     case LedPower(on) =>
       val pinValue = {
         if (isArm) {

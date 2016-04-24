@@ -50,7 +50,8 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
 
   implicit val serverVersionJson = jsonFormat3(ServerVersion)
   implicit val metricHistoryJson = jsonFormat1(MetricHistory)
-  implicit val hostStatisticsJson = jsonFormat3(HostStatistics)
+  implicit val concerningMessagesJson = jsonFormat4(ConcerningMessages)
+  implicit val hostStatisticsJson = jsonFormat4(HostStatistics)
   implicit val commandResultJson = jsonFormat1(CommandResult)
 
   implicit val heartbeatJson = jsonFormat10(Heartbeat)

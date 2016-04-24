@@ -108,21 +108,23 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
           lastHeartbeat = Heartbeat(new DateTime, hb.messageTypeID,
             hb.versionID, hb.frameLocation.get, hb.currentPattern, hb.batteryVoltage.get, hb.frameRate.get,
             hb.memberType, hb.failedMessages.get, hb.currentPatternName)
-          logger.info (lastHeartbeat.toString)
+          logger.debug (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
           lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => (i + 1).toString + " " + n}))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
           ledControllerVersion = LedControllerVersion(welcome.buildTime, welcome.version)
           logger.info (ledControllerVersion.toString)
-        case Msg.Empty =>
+        case Msg.Command(_) =>
+        case Msg.PatternCommand(_) =>
+        case _ =>
       }
     case LedControllerTick =>
       connection ! Write(MessageHeartbeatRequest)
     case HeartbeatRequest =>
       context.sender ! lastHeartbeat
     case LedControllerVersionRequest =>
-      context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
+      context.sender ! LedControllerVersion(ledControllerVersion.versionId, ledControllerVersion.buildTime)
     case PatternNamesRequest =>
       if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
       if (context.sender != self) context.sender ! lastPatternNames

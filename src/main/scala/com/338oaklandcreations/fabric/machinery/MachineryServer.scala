@@ -28,7 +28,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.util.Properties._
 
-object MachineryServer extends App {
+object MachineryServer extends App with SslConfiguration {
 
   def doMain = {
 
