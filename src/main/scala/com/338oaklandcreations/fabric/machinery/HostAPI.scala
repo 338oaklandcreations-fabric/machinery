@@ -105,9 +105,9 @@ class HostAPI extends Actor with ActorLogging {
   def concerningMessages: List[ConcerningMessages] = {
     if (isArm) {
       List("furSwarmLinux.log", "opcServer.log", "machinery.log").map { file =>
-        val warn = Process("bash" :: "-c" :: "grep 'WARN' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
-        val error = Process("bash" :: "-c" :: "grep 'ERROR' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
-        val fatal = Process("bash" :: "-c" :: "grep 'FATAL' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
+        val warn = Process("bash" :: "-c" :: "grep 'WARN' " + file + " | awk 'END{print NR}'" :: Nil).!!.replaceAll("\n", "").toInt
+        val error = Process("bash" :: "-c" :: "grep 'ERROR' " + file + " | awk 'END{print NR}'" :: Nil).!!.replaceAll("\n", "").toInt
+        val fatal = Process("bash" :: "-c" :: "grep 'FATAL' " + file + " | awk 'END{print NR}'" :: Nil).!!.replaceAll("\n", "").toInt
         ConcerningMessages(file, warn, error, fatal)
       }
     } else List(ConcerningMessages("furSwarmLinux.log", 0, 0, 0), ConcerningMessages("opcServer.log", 0, 0, 0), ConcerningMessages("machinery.log", 0, 0, 0))
