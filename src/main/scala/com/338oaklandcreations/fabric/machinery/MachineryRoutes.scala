@@ -22,7 +22,7 @@ package com._338oaklandcreations.fabric.machinery
 import akka.actor._
 import akka.pattern.ask
 import org.slf4j.LoggerFactory
-import spray.http.DateTime
+import spray.http.{HttpCookie, DateTime}
 import spray.http.MediaTypes._
 import spray.routing._
 
@@ -61,7 +61,6 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       heartbeat ~
       hostStatistics ~
       ledPower ~
-      shutdown ~
       reboot ~
       versions ~
       setPattern ~
@@ -71,14 +70,9 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
     case AuthenticationRejection(message) :: _ => complete(400, message)
   }
 
-  val authorizationRejection = RejectionHandler {
-    case AuthenticationRejection(message) :: _ => complete(400, message)
-  }
+  def cookies = cookie("FABRIC_GUIDANCE_SESSION") & cookie("FABRIC_GUIDANCE_USER") & respondWithMediaType(`application/json`)
+  def authenticateCookies(sessionId: HttpCookie, username: HttpCookie) = authenticate(authenticateSessionId(sessionId.content, username.content))
 
-  val keyLifespanMillis = 120000 * 1000 // 2000 minutes
-  val expiration = DateTime.now + keyLifespanMillis
-  val SessionKey = "FABRIC_SESSION"
-  val UserKey = "FABRIC_USER"
   val ResponseTextHeader = "{\"responseText\": "
   val UnknownCommandResponseString = ResponseTextHeader + "\"Unknown command results\"}"
 
@@ -187,18 +181,6 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         }
       } ~ path("server") { ctx =>
         ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, BuildInfo.builtAtString).toJson.toString)
-      }
-    }
-  }
-  def shutdown = post {
-    path("shutdown") { ctx =>
-      val future = controller ? Shutdown
-      future onComplete {
-        case Success(success) => success match {
-          case response: CommandResult => ctx.complete(response.toJson.toString)
-          case _ => ctx.complete(400, UnknownCommandResponseString)
-        }
-        case Failure(failure) => ctx.complete(400, failure.toString)
       }
     }
   }

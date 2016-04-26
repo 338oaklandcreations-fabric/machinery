@@ -33,7 +33,6 @@ object HostAPI {
   case object TimeSeriesRequestMemory
   case object HostStatisticsRequest
   case object Reboot
-  case object Shutdown
 
   case class CommandResult(result: Int)
   case class LedPower(on: Boolean)
@@ -105,13 +104,13 @@ class HostAPI extends Actor with ActorLogging {
 
   def concerningMessages: List[ConcerningMessages] = {
     if (isArm) {
-      List("furSwarmLinux.log", "tcl_server.log", "machinery.log").map { file =>
+      List("furSwarmLinux.log", "opcServer.log", "machinery.log").map { file =>
         val warn = Process("bash" :: "-c" :: "grep 'WARN' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
         val error = Process("bash" :: "-c" :: "grep 'ERROR' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
         val fatal = Process("bash" :: "-c" :: "grep 'FATAL' " + file + " | awk 'END{print NR}'" :: Nil).!!.toInt
         ConcerningMessages(file, warn, error, fatal)
       }
-    } else List()
+    } else List(ConcerningMessages("furSwarmLinux.log", 0, 0, 0), ConcerningMessages("opcServer.log", 0, 0, 0), ConcerningMessages("machinery.log", 0, 0, 0))
   }
 
   def receive = {
@@ -135,7 +134,6 @@ class HostAPI extends Actor with ActorLogging {
         }
       }
       context.sender ! CommandResult(pinValue.toInt)
-    case Shutdown => CommandResult(Process("sudo shutdown").!)
     case Reboot => CommandResult(Process("sudo reboot").!)
     case HostTick => {
       val latestStartTime = {

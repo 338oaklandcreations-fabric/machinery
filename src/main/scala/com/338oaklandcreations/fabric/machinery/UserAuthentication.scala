@@ -50,16 +50,6 @@ trait UserAuthentication {
     userPWD.split(";").map(_.split(",")).map({ x => (x(0), x(1)) }).toMap
   }
 
-  var sessionIds = Map.empty[String, String]
-
-  def authenticateUser(email: String, password: String)(implicit ec: ExecutionContext): ContextAuthenticator[Authenticated] = {
-    ctx =>
-    {
-      logger.info("Authenticating User:" + email + ", *******")
-      doUserAuth(email, password)
-    }
-  }
-
   def authenticateSessionId(sessionId: String, username: String)(implicit ec: ExecutionContext): ContextAuthenticator[Authenticated] = {
     ctx =>
     {
@@ -68,44 +58,18 @@ trait UserAuthentication {
     }
   }
 
-  private def doUserAuth(email: String, password: String)(implicit ec: ExecutionContext): Future[Authentication[Authenticated]] = {
-    Future {
-      val result = {
-        if (authentications.contains(email)) {
-          if (authentications(email) == password) {
-            val sessionId = java.util.UUID.randomUUID.toString
-            sessionIds += (email -> sessionId)
-            Authenticated(sessionId)
-          }
-          else AuthenticationRejection("Invalid Password")
-        } else AuthenticationRejection("Unknown Email")
-      }
-      Either.cond(result match {
-        case Authenticated(token) => true
-        case _ => false
-      },
-        result match {case x: Authenticated => x},
-        result match {case AuthenticationRejection(message) => AuthenticationRejection(message)}
-      )
-    }
-  }
-
   private def doSessionAuth(sessionId: String, email: String)(implicit ec: ExecutionContext): Future[Authentication[Authenticated]] = {
     Future {
       val result = {
-        if (sessionIds.contains(email)) {
-          if (sessionIds(email) == sessionId) {
-            Authenticated(sessionId)
-          }
-          else AuthenticationRejection("Invalid Login")
-        } else AuthenticationRejection("Unknown Email")
+        if (sessionId != "") Authenticated(sessionId)
+        else AuthenticationRejection("Unknown Email")
       }
       Either.cond(result match {
         case Authenticated(token) => true
         case _ => false
       },
-        result match {case x: Authenticated => x},
-        result match {case AuthenticationRejection(message) => AuthenticationRejection(message)}
+        result match { case x: Authenticated => x },
+        result match { case AuthenticationRejection(message) => AuthenticationRejection(message) }
       )
     }
   }
