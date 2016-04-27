@@ -124,7 +124,10 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         val future = controller ? HostStatisticsRequest
         future onComplete {
           case Success(success) => success match {
-            case statistics: HostStatistics => ctx.complete(statistics.toJson.toString)
+            case statistics: HostStatistics => {
+              println(statistics)
+              ctx.complete(statistics.toJson.toString)
+            }
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
