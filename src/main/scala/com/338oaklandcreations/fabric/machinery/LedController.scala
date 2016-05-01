@@ -113,7 +113,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
           lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => (i + 1).toString + " " + n}))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
-          ledControllerVersion = LedControllerVersion(welcome.buildTime, welcome.version)
+          ledControllerVersion = LedControllerVersion(welcome.version, welcome.buildTime)
           logger.info (ledControllerVersion.toString)
         case Msg.Command(_) =>
         case Msg.PatternCommand(_) =>
