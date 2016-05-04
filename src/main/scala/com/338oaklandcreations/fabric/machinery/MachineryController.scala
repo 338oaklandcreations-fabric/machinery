@@ -45,7 +45,7 @@ class MachineryController extends Actor with ActorLogging {
 
   logger.info("Starting Controller")
 
-  val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", 8888))), "ledController")
+  val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
 
   def receive = {

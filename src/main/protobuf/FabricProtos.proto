@@ -1,3 +1,5 @@
+syntax = "proto3";
+
 option java_package = "com._338oaklandcreations.fabric.machinery";
 option java_outer_classname = "FabricProtos";
 
@@ -12,17 +14,19 @@ message FabricWrapperMessage {
 }
 
 message HeartbeatMessage {
-  required int32 messageTypeID = 1;
-  required int32 versionID = 2;
-  optional int32 frameLocation = 3;
-  required int32 currentPattern = 4;
-  optional int32 batteryVoltage = 5;
-  optional int32 frameRate = 6;
-  required int32 memberType = 7;
-  optional int32 failedMessages = 8;
-  required string currentPatternName = 9;
+  int32 messageTypeID = 1;
+  int32 versionID = 2;
+  int32 currentPattern = 3;
+  int32 red = 4;
+  int32 green = 5;
+  int32 blue = 6;
+  int32 speed = 7;
+  int32 intensity = 8;
+  int32 memberType = 9;
+  string currentPatternName = 10;
 
   enum MemberType {
+    PROTOBUF_UNKNOWN = 0;
     PROTOBUF_VEST = 1;
     PROTOBUF_HAT = 2;
     PROTOBUF_TOWER = 3;
@@ -39,26 +43,26 @@ message PatternNamesMessage {
 }
 
 message PatternCommand {
-  required int32 patternNumber = 1;
-  required int32 speed = 2;
-  required int32 intensity = 3;
-  required int32 red = 4;
-  required int32 green = 5;
-  required int32 blue = 6;
+  int32 patternNumber = 1;
+  int32 speed = 2;
+  int32 intensity = 3;
+  int32 red = 4;
+  int32 green = 5;
+  int32 blue = 6;
 }
 
 message CommandMessage {
   enum CommandList {
-    PROTOBUF_HEARTBEAT = 1;
-    PROTOBUF_PATTERN_NAMES = 2;
-    PROTOBUF_PATTERN_COMMAND = 3;
+    PROTOBUF_HEARTBEAT = 0;
+    PROTOBUF_PATTERN_NAMES = 1;
+    PROTOBUF_PATTERN_COMMAND = 2;
   }
-  required CommandList command = 1;
-  optional PatternCommand patternCommand = 2;
+  CommandList command = 1;
+  PatternCommand patternCommand = 2;
 }
 
 message WelcomeMessage {
-  required string buildTime = 1;
-  required string version = 2;
+  string buildTime = 1;
+  string version = 2;
 }
 

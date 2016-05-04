@@ -42,15 +42,15 @@ object LedController {
   case object LedControllerVersionRequest
   case object PatternNamesRequest
 
-  case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, frameLocation: Int, currentPattern: Int,
-                       batteryVoltage: Int, frameRate: Int, memberType: Int, failedMessages: Int, patternName: String)
+  case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, currentPattern: Int,
+                       red: Int, green: Int, blue: Int, speed: Int, intensity: Int, memberType: Int, patternName: String)
   case class Pattern(patternId: Int)
   case class LedControllerVersion(versionId: String, buildTime: String)
   case class PatternNames(names: List[String])
   case class PatternSelect(id: Int, red: Int, green: Int, blue: Int, speed: Int, intensity: Int)
 
-  val MessageHeartbeatRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(CommandMessage.CommandList.PROTOBUF_HEARTBEAT)).toByteArray)
-  val MessagePatternNamesRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(CommandMessage.CommandList.PROTOBUF_PATTERN_NAMES)).toByteArray)
+  val MessageHeartbeatRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_HEARTBEAT))).toByteArray)
+  val MessagePatternNamesRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_PATTERN_NAMES))).toByteArray)
 
   val HeartbeatLength = 11
   val HeartbeatPatternNameLength = 11
@@ -70,7 +70,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, "")
+  var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
   var lastPatternNames = PatternNames(List())
   var ledControllerVersion = LedControllerVersion("", "")
 
@@ -105,15 +105,15 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       val wrapperMessage = FabricProtos.FabricWrapperMessage.parseFrom(data.toArray)
       wrapperMessage.msg match {
         case Msg.Heartbeat(hb) =>
-          lastHeartbeat = Heartbeat(new DateTime, hb.messageTypeID,
-            hb.versionID, hb.frameLocation.get, hb.currentPattern, hb.batteryVoltage.get, hb.frameRate.get,
-            hb.memberType, hb.failedMessages.get, hb.currentPatternName)
+          lastHeartbeat = Heartbeat(new DateTime, hb.messageTypeID.getOrElse(0), hb.versionID.getOrElse(0), hb.currentPattern.getOrElse(0),
+            hb.red.getOrElse(0), hb.green.getOrElse(0), hb.blue.getOrElse(0), hb.speed.getOrElse(0), hb.intensity.getOrElse(0),
+            hb.memberType.getOrElse(0), hb.currentPatternName.getOrElse(""))
           logger.debug (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
-          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => (i + 1).toString + " " + n}))
+          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => if (n == "") "" else (i + 1).toString + " " + n}).filter(!_.isEmpty))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
-          ledControllerVersion = LedControllerVersion(welcome.version, welcome.buildTime)
+          ledControllerVersion = LedControllerVersion(welcome.version.getOrElse(""), welcome.buildTime.getOrElse(""))
           logger.info (ledControllerVersion.toString)
         case Msg.Command(_) =>
         case Msg.PatternCommand(_) =>
@@ -129,7 +129,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
-      val selectMessage = PatternCommand(select.id, select.speed, select.intensity, select.red, select.green, select.blue)
+      val selectMessage = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
       val selectProtobuf = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(selectMessage).toByteArray)
       connection ! Write(selectProtobuf)
     case "close" =>
@@ -137,7 +137,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       connection ! Close
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
-      lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, "")
+      lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
       lastPatternNames = PatternNames(List())
       context.parent ! NodeConnectionClosed
       context become receive
