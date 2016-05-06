@@ -139,7 +139,7 @@ class HostAPI extends Actor with ActorLogging {
       val latestStartTime = {
         val newStartString = Process("bash" :: "-c" :: "ps aux | grep furSwarm | awk '{if ($11 != \"grep\") {print $9}}'" :: Nil).!!
         if (newStartString.contains("\n")) {
-          newStartString.substring(0, newStartString.indexOf("\n")).replaceFirst("^0+(?!$)", "")
+          newStartString.substring(0, newStartString.indexOf("\n")).replaceFirst("^0(?!$)", "")
         } else newStartString
       }
       if (startTime == null || ProcessTimeFormatter.print(startTime) != latestStartTime) {

@@ -21,8 +21,10 @@ package com._338oaklandcreations.fabric.machinery
 
 import akka.actor._
 import akka.pattern.ask
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
-import spray.http.{HttpCookie, DateTime}
+import spray.http.HttpCookie
 import spray.http.MediaTypes._
 import spray.routing._
 
@@ -138,7 +140,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   def ledPower = post {
     path("ledPower" / """(on|off)""".r) { (select) =>
       respondWithMediaType(`application/json`) { ctx =>
-        if (select == "off") controller ! PatternSelect(6, 0, 0, 0, 0, 0)
+        if (select == "off") controller ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
+        else controller ! PatternSelect(-LedController.OffPatternId, 0, 0, 0, 0, 0)
         val future = controller ? LedPower(select == "on")
         future onComplete {
           case Success(success) => success match {
@@ -184,7 +187,9 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
       } ~ path("server") { ctx =>
-        ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, BuildInfo.builtAtString).toJson.toString)
+        val date: DateTime = new DateTime(BuildInfo.builtAtMillis)
+        val formatter = DateTimeFormat.forPattern("yyyy-MM-dd hh:mm:ss a")
+        ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, formatter.print(date)).toJson.toString)
       }
     }
   }

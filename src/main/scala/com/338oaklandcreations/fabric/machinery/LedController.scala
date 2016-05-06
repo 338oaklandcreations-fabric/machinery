@@ -26,7 +26,8 @@ import akka.io.{IO, Tcp}
 import akka.util.{ByteString, Timeout}
 import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg
 import com._338oaklandcreations.fabric.machinery.FabricProtos.{PatternCommand, CommandMessage, FabricWrapperMessage}
-import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTimeZone, DateTime}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -52,6 +53,11 @@ object LedController {
   val MessageHeartbeatRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_HEARTBEAT))).toByteArray)
   val MessagePatternNamesRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_PATTERN_NAMES))).toByteArray)
 
+  val OffPatternId = 6
+  val FullColorPatternId = 3
+
+  val OffCommand = PatternCommand(Some(OffPatternId), Some(0), Some(0), Some(0), Some(0), Some(0))
+
   val HeartbeatLength = 11
   val HeartbeatPatternNameLength = 11
   val HeartbeatTotalLength = HeartbeatLength + HeartbeatPatternNameLength
@@ -73,6 +79,8 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
   var lastPatternNames = PatternNames(List())
   var ledControllerVersion = LedControllerVersion("", "")
+  var isOff = true
+  var lastPatternSelect = PatternCommand(Some(3), Some(255), Some(255), Some(255), Some(0), Some(0))
 
   var tickInterval = 5 seconds
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, LedControllerTick)
@@ -110,10 +118,17 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
             hb.memberType.getOrElse(0), hb.currentPatternName.getOrElse(""))
           logger.debug (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
-          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => if (n == "") "" else (i + 1).toString + " " + n}).filter(!_.isEmpty))
+          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty) "" else (i + 1).toString + "-" + n}).filter(!_.isEmpty))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
-          ledControllerVersion = LedControllerVersion(welcome.version.getOrElse(""), welcome.buildTime.getOrElse(""))
+          val date =
+            try {
+              new DateTime(DateTime.parse(welcome.buildTime.getOrElse("").replaceAll("_", "T").replaceAll("-", ":") + "Z")).withZone(DateTimeZone.forID("America/Los Angeles"))
+            } catch {
+              case _: Throwable => new DateTime
+            }
+          val formatter = DateTimeFormat.forPattern("yyyy-MM-dd hh:mm:ss a")
+          ledControllerVersion = LedControllerVersion(welcome.version.getOrElse(""), formatter.print(date))
           logger.info (ledControllerVersion.toString)
         case Msg.Command(_) =>
         case Msg.PatternCommand(_) =>
@@ -129,8 +144,21 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
-      val selectMessage = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
-      val selectProtobuf = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(selectMessage).toByteArray)
+      val selectProtobuf =
+        if (select.id == OffPatternId) {
+          isOff = true
+          ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
+        } else if (select.id == -OffPatternId) {
+          isOff = false
+          ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
+        } else {
+          lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
+          if (isOff) {
+            ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
+          } else {
+            ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
+          }
+        }
       connection ! Write(selectProtobuf)
     case "close" =>
       logger.info("close")
