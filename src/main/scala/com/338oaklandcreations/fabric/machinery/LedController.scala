@@ -93,7 +93,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       logger.info("Connected: " + self.path.name)
       val connection = sender
       connection ! Register(self)
-      context.system.scheduler.scheduleOnce (1000 milliseconds, self, PatternNamesRequest)
+      context.system.scheduler.scheduleOnce (10 milliseconds, self, PatternNamesRequest)
       context become connected(connection)
     case LedControllerVersionRequest =>
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
