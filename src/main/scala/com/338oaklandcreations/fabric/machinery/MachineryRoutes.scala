@@ -187,7 +187,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
           case Failure(failure) => ctx.complete(400, failure.toString)
         }
       } ~ path("server") { ctx =>
-        val date: DateTime = new DateTime(BuildInfo.builtAtMillis)
+        val date: DateTime = new DateTime(BuildInfo.builtAtMillis).withZone(DateTimeZone.UTC)
         val formatter = DateTimeFormat.forPattern("yyyy-MM-dd hh:mm:ss a")
         ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, formatter.print(date)).toJson.toString)
       }
