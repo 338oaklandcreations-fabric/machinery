@@ -143,26 +143,26 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
-      val selectProtobuf =
-        if (select.id == OffPatternId) {
-          isOff = true
-          logger.info("Off Selected")
-          ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
-        } else if (select.id == -OffPatternId) {
-          isOff = false
-          logger.info("Off DeSelected")
-          ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
+      if (select.id == OffPatternId) {
+        isOff = true
+        logger.debug("Off Selected")
+        val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
+        connection ! Write(bytes)
+      } else if (select.id == -OffPatternId) {
+        isOff = false
+        logger.debug("Off DeSelected")
+        val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
+        connection ! Write(bytes)
+      } else {
+        lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
+        if (isOff) {
+          logger.debug("Storing command because we are off")
         } else {
-          lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
-          if (isOff) {
-            logger.info("Storing command because we are off")
-            ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
-          } else {
-            logger.info("Sending out command")
-            ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
-          }
+          logger.debug("Sending out command")
+          val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
+          connection ! Write(bytes)
         }
-      connection ! Write(selectProtobuf)
+      }
     case "close" =>
       logger.info("close")
       connection ! Close

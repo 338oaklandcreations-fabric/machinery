@@ -21,9 +21,9 @@ package com._338oaklandcreations.fabric.machinery
 
 import akka.actor._
 import akka.pattern.ask
-import org.joda.time.format.{ISODateTimeFormat, DateTimeFormat}
+import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import spray.http.HttpCookie
 import spray.http.MediaTypes._
 import spray.routing._
@@ -66,7 +66,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       reboot ~
       versions ~
       setPattern ~
-      patternNames
+      patternNames ~
+      logLevel
 
   val authenticationRejection = RejectionHandler {
     case AuthenticationRejection(message) :: _ => complete(400, message)
@@ -189,6 +190,20 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       } ~ path("server") { ctx =>
         val date: DateTime = new DateTime(BuildInfo.builtAtMillis).withZone(DateTimeZone.UTC)
         ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, ISODateTimeFormat.dateTime.print(date)).toJson.toString)
+      }
+    }
+  }
+  def logLevel = post {
+    path("logLevel" / """(DEBUG|INFO|WARN)""".r) { (level) =>
+      respondWithMediaType(`application/json`) { ctx =>
+        import ch.qos.logback.classic.Level
+        val root = org.slf4j.LoggerFactory.getLogger("root").asInstanceOf[ch.qos.logback.classic.Logger]
+        level match {
+          case "DEBUG" => root.setLevel(Level.DEBUG)
+          case "INFO" => root.setLevel(Level.INFO)
+          case "WARN" => root.setLevel(Level.WARN)
+        }
+        ctx.complete(CommandResult(0).toJson.toString)
       }
     }
   }
