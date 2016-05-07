@@ -80,7 +80,7 @@ class HostAPI extends Actor with ActorLogging {
       val directionCommand = "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\""
       logger.info("Direction for ledPower pin...")
       Process(Seq("bash", "-c", directionCommand)).!
-      val valueCommand = "sudo sh -c \"echo 0 > "+ ledPowerPinFilename + "/value\""
+      val valueCommand = "sudo sh -c \"echo 1 > "+ ledPowerPinFilename + "/value\""
       logger.info("Value for ledPower pin...")
       Process(Seq("bash", "-c", valueCommand)).!
     }
