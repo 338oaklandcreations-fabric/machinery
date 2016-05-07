@@ -26,7 +26,7 @@ import akka.io.{IO, Tcp}
 import akka.util.{ByteString, Timeout}
 import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg
 import com._338oaklandcreations.fabric.machinery.FabricProtos.{PatternCommand, CommandMessage, FabricWrapperMessage}
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.{ISODateTimeFormat, DateTimeFormat}
 import org.joda.time.{DateTimeZone, DateTime}
 import org.slf4j.LoggerFactory
 
@@ -127,8 +127,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
             } catch {
               case _: Throwable => new DateTime
             }
-          val formatter = DateTimeFormat.forPattern("yyyy-MM-dd hh:mm:ss a")
-          ledControllerVersion = LedControllerVersion(welcome.version.getOrElse(""), formatter.print(date))
+          ledControllerVersion = LedControllerVersion(welcome.version.getOrElse(""), ISODateTimeFormat.dateTime.print(date))
           logger.info (ledControllerVersion.toString)
         case Msg.Command(_) =>
         case Msg.PatternCommand(_) =>

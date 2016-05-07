@@ -21,7 +21,7 @@ package com._338oaklandcreations.fabric.machinery
 
 import akka.actor._
 import akka.pattern.ask
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.{ISODateTimeFormat, DateTimeFormat}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import spray.http.HttpCookie
@@ -188,8 +188,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
         }
       } ~ path("server") { ctx =>
         val date: DateTime = new DateTime(BuildInfo.builtAtMillis).withZone(DateTimeZone.UTC)
-        val formatter = DateTimeFormat.forPattern("yyyy-MM-dd hh:mm:ss a")
-        ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, formatter.print(date)).toJson.toString)
+        ctx.complete(ServerVersion(BuildInfo.version, BuildInfo.scalaVersion, ISODateTimeFormat.dateTime.print(date)).toJson.toString)
       }
     }
   }
