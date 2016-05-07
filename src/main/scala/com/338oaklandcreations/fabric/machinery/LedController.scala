@@ -118,12 +118,12 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
             hb.memberType.getOrElse(0), hb.currentPatternName.getOrElse(""))
           logger.debug (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
-          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || i == OffPatternId) "" else (i + 1).toString + "-" + n}).filter(!_.isEmpty))
+          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || (i + 1) == OffPatternId) "" else (i + 1).toString + "-" + n}).filter(!_.isEmpty))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
           val date =
             try {
-              new DateTime(DateTime.parse(welcome.buildTime.getOrElse("").replaceAll("_", "T").replaceAll("-", ":") + "Z")).withZone(DateTimeZone.forID("America/Los Angeles"))
+              new DateTime(DateTime.parse(welcome.buildTime.getOrElse("").replaceAll("_", "T").replaceAll("-", ":"))).withZone(DateTimeZone.forID("America/Los Angeles"))
             } catch {
               case _: Throwable => new DateTime
             }

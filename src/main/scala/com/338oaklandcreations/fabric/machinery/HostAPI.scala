@@ -96,7 +96,7 @@ class HostAPI extends Actor with ActorLogging {
 
   def currentMemory: Double = {
     if (isArm) {
-      Process("bash" :: "-c" :: "free -m | awk 'FNR==2{print $3 / $2 * 100}'" :: Nil).!!.toDouble.min(100.0)
+      Process("bash" :: "-c" :: "free -m | awk 'FNR==3{print $3 / ($4 + $3) * 100}'" :: Nil).!!.toDouble.min(100.0)
     } else {
       Process("bash" :: "-c" :: "ps aux | awk '{sum += $4} END {print sum}'" :: Nil).!!.toDouble.min(100.0)
     }
