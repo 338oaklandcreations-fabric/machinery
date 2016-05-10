@@ -79,7 +79,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
   var lastPatternNames = PatternNames(List())
   var ledControllerVersion = LedControllerVersion("", "")
-  var isOff = true
+  var isOff = false
   var lastPatternSelect = PatternCommand(Some(3), Some(255), Some(255), Some(255), Some(0), Some(0))
 
   var tickInterval = 5 seconds
