@@ -59,5 +59,6 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
   implicit val patternSelectJson = jsonFormat6(PatternSelect)
   implicit val patternJson = jsonFormat1(Pattern)
   implicit val ledControllerVersionJson = jsonFormat2(LedControllerVersion)
+  implicit val wellLightSettingsJson = jsonFormat2(WellLightSettings)
 
 }

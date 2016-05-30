@@ -36,6 +36,7 @@ object HostAPI {
 
   case class CommandResult(result: Int)
   case class LedPower(on: Boolean)
+  case class WellLightSettings(powerOn: Boolean, level: Int)
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
   case class ConcerningMessages(logfile: String, warn: Int, error: Int, fatal: Int)
@@ -68,21 +69,41 @@ class HostAPI extends Actor with ActorLogging {
   var hoursToTrack = 6 hours
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val ledPowerPin = "48"
-  val ledPowerPinFilename = "/sys/class/gpio/gpio" + ledPowerPin
+  def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
+
+  def setupPWM = {
+    val enableCommand = "sudo sh -c \"echo 0 > /sys/devices/bs_pwm_test_P9_14.12/run\""
+    logger.info("Disable PWM pin...")
+    Process(Seq("bash", "-c", enableCommand)).!
+  }
+
+  def setupGPIO(pin: String) = {
+    val enableCommand = "sudo sh -c \"echo " + pin + " > /sys/class/gpio/export\""
+    logger.info("Enable ledPower pin...")
+    Process(Seq("bash", "-c", enableCommand)).!
+    val directionCommand = "sudo sh -c \"echo out > " + pinFilename(pin) + "/direction\""
+    logger.info("Direction for ledPower pin...")
+    Process(Seq("bash", "-c", directionCommand)).!
+    val valueCommand = "sudo sh -c \"echo 1 > "+ pinFilename(pin) + "/value\""
+    logger.info("Value for ledPower pin...")
+    Process(Seq("bash", "-c", valueCommand)).!
+  }
+
+  def setGPIOpin(pinValue: Boolean, pin: String) = {
+    val value = if (pinValue) "1" else "0"
+    val valueCommand = "sudo sh -c \"echo " + value + " > " + pinFilename(pin) + "/value\""
+    Process(Seq("bash", "-c", valueCommand)).!
+    val setPinResult = ("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
+    setPinResult
+  }
 
   override def preStart(): Unit = {
     logger.info("Starting HostAPI...")
     if (isArm) {
       logger.info("Starting GPIO for ledPower control...")
-      val enableCommand = "sudo sh -c \"echo " + ledPowerPin + " > /sys/class/gpio/export\""
-      logger.info("Enable ledPower pin...")
-      Process(Seq("bash", "-c", enableCommand)).!
-      val directionCommand = "sudo sh -c \"echo out > " + ledPowerPinFilename + "/direction\""
-      logger.info("Direction for ledPower pin...")
-      Process(Seq("bash", "-c", directionCommand)).!
-      val valueCommand = "sudo sh -c \"echo 1 > "+ ledPowerPinFilename + "/value\""
-      logger.info("Value for ledPower pin...")
-      Process(Seq("bash", "-c", valueCommand)).!
+      setupGPIO(ledPowerPin)
+      logger.info("Starting GPIO for wellLight control...")
+      setupPWM
     }
   }
 
@@ -124,13 +145,18 @@ class HostAPI extends Actor with ActorLogging {
     case LedPower(on) =>
       val pinValue = {
         if (isArm) {
-          val value = if (on) "1" else "0"
-          val valueCommand = "sudo sh -c \"echo " + value + " > " + ledPowerPinFilename + "/value\""
-          Process(Seq("bash", "-c", valueCommand)).!
-          val pinValue = ("cat " + ledPowerPinFilename + "/value").!!.replaceAll("\n", "")
-          pinValue
+          setGPIOpin(on, ledPowerPin)
         } else {
           if (on) "1" else "0"
+        }
+      }
+      context.sender ! CommandResult(pinValue.toInt)
+    case WellLightSettings(power, level) =>
+      val pinValue = {
+        if (isArm) {
+          level
+        } else {
+          level
         }
       }
       context.sender ! CommandResult(pinValue.toInt)
