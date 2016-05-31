@@ -25,9 +25,9 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
 import akka.util.{ByteString, Timeout}
 import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg
-import com._338oaklandcreations.fabric.machinery.FabricProtos.{PatternCommand, CommandMessage, FabricWrapperMessage}
-import org.joda.time.format.{ISODateTimeFormat, DateTimeFormat}
-import org.joda.time.{DateTimeZone, DateTime}
+import com._338oaklandcreations.fabric.machinery.FabricProtos.{CommandMessage, FabricWrapperMessage, PatternCommand}
+import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -164,7 +164,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
         }
       }
     case "close" =>
-      logger.info("close")
+      logger.info("Shutting off LedController")
       connection ! Close
     case _: ConnectionClosed =>
       logger.info("Connection Closed")

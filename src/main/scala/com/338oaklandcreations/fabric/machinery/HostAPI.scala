@@ -67,14 +67,33 @@ class HostAPI extends Actor with ActorLogging {
   var startTime: DateTime = null
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
+  val pwmPeriod = 10000000
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
 
-  def setupPWM = {
-    val enableCommand = "sudo sh -c \"echo 0 > /sys/devices/bs_pwm_test_P9_14.12/run\""
-    logger.info("Disable PWM pin...")
+  def setPWMperiod(period: Int) = {
+    val periodCommand = "sudo sh -c \"echo " + period + " > /sys/devices/bs_pwm_test_P9_14.12/period\""
+    logger.info("Set PWM period...")
+    Process(Seq("bash", "-c", periodCommand)).!
+  }
+
+  def setPWMduty(duty: Int) = {
+    val dutyCommand = "sudo sh -c \"echo " + duty + " > /sys/devices/bs_pwm_test_P9_14.12/duty\""
+    logger.info("Set PWM duty...")
+    Process(Seq("bash", "-c", dutyCommand)).!
+  }
+
+  def setPWMrun(on: Boolean) = {
+    val enableCommand = "sudo sh -c \"echo " + {if (on) 1 else 0} + " > /sys/devices/bs_pwm_test_P9_14.12/run\""
+    logger.info("Set PWM pin run...")
     Process(Seq("bash", "-c", enableCommand)).!
+  }
+
+  def setupPWM = {
+    setPWMperiod(pwmPeriod)
+    setPWMduty(pwmPeriod / 2)
+    setPWMrun(false)
   }
 
   def setupGPIO(pin: String) = {
@@ -152,9 +171,17 @@ class HostAPI extends Actor with ActorLogging {
       }
       context.sender ! CommandResult(pinValue.toInt)
     case WellLightSettings(power, level) =>
+      logger.info(power + " " + level)
       val pinValue = {
         if (isArm) {
-          level
+          if (power) {
+            val value = ((level.toDouble / 255.0) * pwmPeriod).toInt
+            setPWMduty(value)
+            value
+          } else {
+            setPWMrun(false)
+            0
+          }
         } else {
           level
         }
