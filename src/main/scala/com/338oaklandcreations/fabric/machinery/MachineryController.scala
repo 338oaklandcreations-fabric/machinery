@@ -22,13 +22,10 @@ package com._338oaklandcreations.fabric.machinery
 import java.net.InetSocketAddress
 
 import akka.actor._
-import akka.pattern.ask
 import akka.util.Timeout
 import org.slf4j.LoggerFactory
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
-import scala.util.{Failure, Success}
+import scala.concurrent.duration._
 
 object MachineryController {
 }
@@ -74,6 +71,12 @@ class MachineryController extends Actor with ActorLogging {
     case select: PatternSelect =>
       logger.debug("PatternSelect")
       ledController forward select
+    case WellLightSettings(power, level) =>
+      logger.debug("WellLightSettings")
+      hostAPI forward WellLightSettings(power, level)
+    case WellLightSettingsRequest =>
+      logger.debug("WellLightSettingsRequest")
+      hostAPI forward WellLightSettingsRequest
     case NodeConnectionClosed =>
     case unknown => logger.debug("Received Unknown message: " + unknown.toString)
   }

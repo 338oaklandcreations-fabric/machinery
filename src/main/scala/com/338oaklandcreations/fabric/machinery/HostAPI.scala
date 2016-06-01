@@ -19,7 +19,7 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Cancellable, Actor, ActorLogging}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
@@ -29,9 +29,11 @@ import scala.sys.process._
 
 object HostAPI {
   case object HostTick
+  case object WellLightTick
   case object TimeSeriesRequestCPU
   case object TimeSeriesRequestMemory
   case object HostStatisticsRequest
+  case object WellLightSettingsRequest
   case object Reboot
 
   case class CommandResult(result: Int)
@@ -65,29 +67,39 @@ class HostAPI extends Actor with ActorLogging {
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
   var startTime: DateTime = null
+  var wellLightSettings: WellLightSettings = null
+  var currentWellLightSettings: WellLightSettings = null
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
+  val wellLightTickInterval = 50 milliseconds
+  var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
 
   def setPWMperiod(period: Int) = {
-    val periodCommand = "sudo sh -c \"echo " + period + " > /sys/devices/bs_pwm_test_P9_14.12/period\""
-    logger.info("Set PWM period...")
-    Process(Seq("bash", "-c", periodCommand)).!
+    if (isArm) {
+      val periodCommand = "sudo sh -c \"echo " + period + " > /sys/devices/bs_pwm_test_P9_14.12/period\""
+      logger.info("Set PWM period...")
+      Process(Seq("bash", "-c", periodCommand)).!
+    }
   }
 
   def setPWMduty(duty: Int) = {
-    val dutyCommand = "sudo sh -c \"echo " + duty + " > /sys/devices/bs_pwm_test_P9_14.12/duty\""
-    logger.info("Set PWM duty...")
-    Process(Seq("bash", "-c", dutyCommand)).!
+    if (isArm) {
+      val dutyCommand = "sudo sh -c \"echo " + duty + " > /sys/devices/bs_pwm_test_P9_14.12/duty\""
+      logger.info("Set PWM duty...")
+      Process(Seq("bash", "-c", dutyCommand)).!
+    }
   }
 
   def setPWMrun(on: Boolean) = {
-    val enableCommand = "sudo sh -c \"echo " + {if (on) 1 else 0} + " > /sys/devices/bs_pwm_test_P9_14.12/run\""
-    logger.info("Set PWM pin run...")
-    Process(Seq("bash", "-c", enableCommand)).!
+    if (isArm) {
+      val enableCommand = "sudo sh -c \"echo " + {if (on) 1 else 0} + " > /sys/devices/bs_pwm_test_P9_14.12/run\""
+      logger.info("Set PWM pin run...")
+      Process(Seq("bash", "-c", enableCommand)).!
+    }
   }
 
   def setupPWM = {
@@ -97,33 +109,37 @@ class HostAPI extends Actor with ActorLogging {
   }
 
   def setupGPIO(pin: String) = {
-    val enableCommand = "sudo sh -c \"echo " + pin + " > /sys/class/gpio/export\""
-    logger.info("Enable ledPower pin...")
-    Process(Seq("bash", "-c", enableCommand)).!
-    val directionCommand = "sudo sh -c \"echo out > " + pinFilename(pin) + "/direction\""
-    logger.info("Direction for ledPower pin...")
-    Process(Seq("bash", "-c", directionCommand)).!
-    val valueCommand = "sudo sh -c \"echo 1 > "+ pinFilename(pin) + "/value\""
-    logger.info("Value for ledPower pin...")
-    Process(Seq("bash", "-c", valueCommand)).!
+    if (isArm) {
+      val enableCommand = "sudo sh -c \"echo " + pin + " > /sys/class/gpio/export\""
+      logger.info("Enable ledPower pin...")
+      Process(Seq("bash", "-c", enableCommand)).!
+      val directionCommand = "sudo sh -c \"echo out > " + pinFilename(pin) + "/direction\""
+      logger.info("Direction for ledPower pin...")
+      Process(Seq("bash", "-c", directionCommand)).!
+      val valueCommand = "sudo sh -c \"echo 1 > "+ pinFilename(pin) + "/value\""
+      logger.info("Value for ledPower pin...")
+      Process(Seq("bash", "-c", valueCommand)).!
+    }
   }
 
   def setGPIOpin(pinValue: Boolean, pin: String) = {
-    val value = if (pinValue) "1" else "0"
-    val valueCommand = "sudo sh -c \"echo " + value + " > " + pinFilename(pin) + "/value\""
-    Process(Seq("bash", "-c", valueCommand)).!
-    val setPinResult = ("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
-    setPinResult
+    if (isArm) {
+      val value = if (pinValue) "1" else "0"
+      val valueCommand = "sudo sh -c \"echo " + value + " > " + pinFilename(pin) + "/value\""
+      Process(Seq("bash", "-c", valueCommand)).!
+      val setPinResult = ("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
+      setPinResult
+    } else "1"
   }
 
   override def preStart(): Unit = {
     logger.info("Starting HostAPI...")
-    if (isArm) {
-      logger.info("Starting GPIO for ledPower control...")
-      setupGPIO(ledPowerPin)
-      logger.info("Starting GPIO for wellLight control...")
-      setupPWM
-    }
+    logger.info("Starting GPIO for ledPower control...")
+    setupGPIO(ledPowerPin)
+    logger.info("Starting GPIO for wellLight control...")
+    setupPWM
+    wellLightSettings = WellLightSettings(false, 128)
+    currentWellLightSettings = WellLightSettings(false, 128)
   }
 
   def currentCpu: Double = {
@@ -171,7 +187,6 @@ class HostAPI extends Actor with ActorLogging {
       }
       context.sender ! CommandResult(pinValue.toInt)
     case WellLightSettings(power, level) =>
-      logger.info(power + " " + level)
       val pinValue = {
         if (isArm) {
           if (power) {
@@ -186,7 +201,23 @@ class HostAPI extends Actor with ActorLogging {
           level
         }
       }
-      context.sender ! CommandResult(pinValue.toInt)
+      wellLightSettings = WellLightSettings(power, level)
+      wellLightTickScheduler = context.system.scheduler.schedule (0 milliseconds, wellLightTickInterval, self, WellLightTick)
+    case WellLightTick =>
+      if (wellLightSettings.level > currentWellLightSettings.level) {
+        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level + 1)
+        val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
+        setPWMduty(value)
+      } else if (wellLightSettings.level < currentWellLightSettings.level) {
+        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level - 1)
+        val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
+        setPWMduty(value)
+      } else {
+        if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
+        wellLightTickScheduler = null
+      }
+    case WellLightSettingsRequest =>
+      context.sender ! wellLightSettings
     case Reboot => CommandResult(Process("sudo reboot").!)
     case HostTick => {
       val latestStartTime = {

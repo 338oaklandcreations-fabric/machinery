@@ -68,6 +68,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       setPattern ~
       patternNames ~
       setWellLightSettings ~
+      wellLightSettingsRequest ~
       logLevel
 
   val authenticationRejection = RejectionHandler {
@@ -156,11 +157,25 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
     }
   }
   def setWellLightSettings = post {
-    path("wellLightSettings") { (select) =>
+    path("wellLightSettings") {
       respondWithMediaType(`application/json`) { ctx =>
         val patternSelect = ctx.request.entity.data.asString.parseJson.convertTo[WellLightSettings]
         controller ! patternSelect
         ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
+  def wellLightSettingsRequest = get {
+    path("wellLightSettings") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val future = controller ? WellLightSettingsRequest
+        future onComplete {
+          case Success(success) => success match {
+            case settings: WellLightSettings => ctx.complete(settings.toJson.toString)
+            case _ => ctx.complete(400, UnknownCommandResponseString)
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
       }
     }
   }
