@@ -73,7 +73,7 @@ class HostAPI extends Actor with ActorLogging {
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
-  val wellLightTickInterval = 50 milliseconds
+  val wellLightTickInterval = 25 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
@@ -129,7 +129,7 @@ class HostAPI extends Actor with ActorLogging {
       Process(Seq("bash", "-c", valueCommand)).!
       val setPinResult = ("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
       setPinResult
-    } else "1"
+    } else if (pinValue) "1" else "0"
   }
 
   override def preStart(): Unit = {
@@ -178,13 +178,7 @@ class HostAPI extends Actor with ActorLogging {
     case HostStatisticsRequest =>
       context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse, concerningMessages)
     case LedPower(on) =>
-      val pinValue = {
-        if (isArm) {
-          setGPIOpin(on, ledPowerPin)
-        } else {
-          if (on) "1" else "0"
-        }
-      }
+      val pinValue = setGPIOpin(on, ledPowerPin)
       context.sender ! CommandResult(pinValue.toInt)
     case WellLightSettings(power, level) =>
       val pinValue = {
@@ -208,11 +202,14 @@ class HostAPI extends Actor with ActorLogging {
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level + 1)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
+        logger.info(value.toString)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level - 1)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
+        logger.info(value.toString)
       } else {
+        logger.info("CANCEL")
         if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
         wellLightTickScheduler = null
       }
