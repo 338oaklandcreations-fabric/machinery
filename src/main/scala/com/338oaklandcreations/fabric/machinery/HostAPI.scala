@@ -77,10 +77,11 @@ class HostAPI extends Actor with ActorLogging {
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
+  val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
 
   def setPWMperiod(period: Int) = {
     if (isArm) {
-      val periodCommand = "sudo sh -c \"echo " + period + " > /sys/devices/bs_pwm_test_P9_14.12/period\""
+      val periodCommand = "sudo sh -c \"echo " + period + " > " + PwmDevice + "/period\""
       logger.info("Set PWM period...")
       Process(Seq("bash", "-c", periodCommand)).!
     }
@@ -88,7 +89,7 @@ class HostAPI extends Actor with ActorLogging {
 
   def setPWMduty(duty: Int) = {
     if (isArm) {
-      val dutyCommand = "sudo sh -c \"echo " + duty + " > /sys/devices/bs_pwm_test_P9_14.12/duty\""
+      val dutyCommand = "sudo sh -c \"echo " + duty + " > " + PwmDevice + "/duty\""
       logger.info("Set PWM duty...")
       Process(Seq("bash", "-c", dutyCommand)).!
     }
@@ -96,7 +97,7 @@ class HostAPI extends Actor with ActorLogging {
 
   def setPWMrun(on: Boolean) = {
     if (isArm) {
-      val enableCommand = "sudo sh -c \"echo " + {if (on) 1 else 0} + " > /sys/devices/bs_pwm_test_P9_14.12/run\""
+      val enableCommand = "sudo sh -c \"echo " + {if (on) 1 else 0} + " > " + PwmDevice + "/run\""
       logger.info("Set PWM pin run...")
       Process(Seq("bash", "-c", enableCommand)).!
     }
