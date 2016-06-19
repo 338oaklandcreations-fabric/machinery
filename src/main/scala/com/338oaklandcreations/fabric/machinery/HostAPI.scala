@@ -72,7 +72,7 @@ class HostAPI extends Actor with ActorLogging {
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
-  val WellLightSetttingStep = 1
+  val WellLightSetttingStep = 5
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val wellLightTickInterval = 10 milliseconds
   var wellLightTickScheduler: Cancellable = null
@@ -210,18 +210,18 @@ class HostAPI extends Actor with ActorLogging {
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
-        logger.info(value.toString)
+        logger.info("Dimming at " + value.toString + " toward " + wellLightSettings.level)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level - WellLightSetttingStep > wellLightSettings.level) wellLightSettings.level
+          if (currentWellLightSettings.level - WellLightSetttingStep < wellLightSettings.level) wellLightSettings.level
           else currentWellLightSettings.level - WellLightSetttingStep
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
-        logger.info(value.toString)
+        logger.info("Dimming at " + value.toString + " toward " + wellLightSettings.level)
       } else {
-        logger.info("Stop well lightdimming")
+        logger.info("Stop welllight dimming")
         if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
         wellLightTickScheduler = null
       }
