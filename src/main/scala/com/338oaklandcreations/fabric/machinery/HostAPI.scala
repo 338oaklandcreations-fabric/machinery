@@ -97,7 +97,7 @@ class HostAPI extends Actor with ActorLogging {
 
   def setPWMrun(on: Boolean) = {
     if (isArm) {
-      val enableCommand = "sudo sh -c \"echo " + {if (on) 1 else 0} + " > " + PwmDevice + "/run\""
+      val enableCommand = "sudo sh -c \"echo " + {if (on) "1" else "0"} + " > " + PwmDevice + "/run\""
       logger.info("Set PWM pin run...")
       Process(Seq("bash", "-c", enableCommand)).!
     }
