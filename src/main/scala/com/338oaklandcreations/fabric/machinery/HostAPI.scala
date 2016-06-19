@@ -185,12 +185,12 @@ class HostAPI extends Actor with ActorLogging {
     case WellLightSettings(power, level) =>
       val pinValue = {
         if (isArm) {
+          setPWMrun(power)
           if (power) {
             val value = ((level.toDouble / 255.0) * pwmPeriod).toInt
             setPWMduty(value)
             value
           } else {
-            setPWMrun(false)
             0
           }
         } else {
