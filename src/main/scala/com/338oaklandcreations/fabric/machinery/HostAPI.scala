@@ -72,8 +72,9 @@ class HostAPI extends Actor with ActorLogging {
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
+  val WellLightSetttingStep = 1
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
-  val wellLightTickInterval = 25 milliseconds
+  val wellLightTickInterval = 10 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
@@ -202,17 +203,25 @@ class HostAPI extends Actor with ActorLogging {
       wellLightTickScheduler = context.system.scheduler.schedule (0 milliseconds, wellLightTickInterval, self, WellLightTick)
     case WellLightTick =>
       if (wellLightSettings.level > currentWellLightSettings.level) {
-        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level + 10)
+        val newLevel = {
+          if (currentWellLightSettings.level + WellLightSetttingStep > wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level + WellLightSetttingStep
+        }
+        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
         logger.info(value.toString)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
-        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level - 10)
+        val newLevel = {
+          if (currentWellLightSettings.level - WellLightSetttingStep > wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level - WellLightSetttingStep
+        }
+        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
         logger.info(value.toString)
       } else {
-        logger.info("CANCEL")
+        logger.info("Stop well lightdimming")
         if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
         wellLightTickScheduler = null
       }
