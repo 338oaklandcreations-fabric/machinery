@@ -82,7 +82,7 @@ class HostAPI extends Actor with ActorLogging {
   def setPWMperiod(period: Int) = {
     if (isArm) {
       val periodCommand = "sudo sh -c \"echo " + period + " > " + PwmDevice + "/period\""
-      logger.info("Set PWM period...")
+      logger.info("Set PWM period to " + period + "...")
       Process(Seq("bash", "-c", periodCommand)).!
     }
   }
@@ -90,15 +90,16 @@ class HostAPI extends Actor with ActorLogging {
   def setPWMduty(duty: Int) = {
     if (isArm) {
       val dutyCommand = "sudo sh -c \"echo " + duty + " > " + PwmDevice + "/duty\""
-      logger.info("Set PWM duty...")
+      logger.info("Set PWM duty to " + duty + "...")
       Process(Seq("bash", "-c", dutyCommand)).!
     }
   }
 
   def setPWMrun(on: Boolean) = {
     if (isArm) {
-      val enableCommand = "sudo sh -c \"echo " + {if (on) "1" else "0"} + " > " + PwmDevice + "/run\""
-      logger.info("Set PWM pin run...")
+      val value = if (on) "1" else "0"
+      val enableCommand = "sudo sh -c \"echo " + value + " > " + PwmDevice + "/run\""
+      logger.info("Set PWM pin run to " + value + "...")
       Process(Seq("bash", "-c", enableCommand)).!
     }
   }
@@ -197,15 +198,16 @@ class HostAPI extends Actor with ActorLogging {
         }
       }
       wellLightSettings = WellLightSettings(power, level)
+      if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
       wellLightTickScheduler = context.system.scheduler.schedule (0 milliseconds, wellLightTickInterval, self, WellLightTick)
     case WellLightTick =>
       if (wellLightSettings.level > currentWellLightSettings.level) {
-        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level + 1)
+        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level + 10)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
         logger.info(value.toString)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
-        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level - 1)
+        currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, currentWellLightSettings.level - 10)
         val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
         setPWMduty(value)
         logger.info(value.toString)
