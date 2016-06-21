@@ -56,6 +56,8 @@ message CommandMessage {
     PROTOBUF_HEARTBEAT = 0;
     PROTOBUF_PATTERN_NAMES = 1;
     PROTOBUF_PATTERN_COMMAND = 2;
+    PROTOBUF_OPC_DISCONNECT = 3;
+    PROTOBUF_OPC_CONNECT = 4;
   }
   CommandList command = 1;
   PatternCommand patternCommand = 2;

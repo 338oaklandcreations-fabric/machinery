@@ -143,7 +143,7 @@ class HostAPI extends Actor with ActorLogging {
     logger.info("Starting HostAPI...")
     logger.info("Starting GPIO for ledPower control...")
     setupGPIO(ledPowerPin)
-    logger.info("Starting GPIO for wellLight control...")
+    logger.info("Starting PWM for wellLight control...")
     setupPWM
     wellLightSettings = WellLightSettings(false, 128)
     currentWellLightSettings = WellLightSettings(false, 128)
