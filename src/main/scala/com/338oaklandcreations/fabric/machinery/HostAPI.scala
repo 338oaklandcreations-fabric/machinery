@@ -72,9 +72,9 @@ class HostAPI extends Actor with ActorLogging {
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
-  val WellLightSetttingStep = 5
+  val WellLightSetttingStep = pwmPeriod / 1000
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
-  val wellLightTickInterval = 10 milliseconds
+  val wellLightTickInterval = 5 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
@@ -103,6 +103,10 @@ class HostAPI extends Actor with ActorLogging {
       logger.info("Set PWM pin run to " + value + "...")
       Process(Seq("bash", "-c", enableCommand)).!
     }
+  }
+
+  def pwmLogarithmicLevel(level: Int): Int = {
+    ((Math.pow(10.0, (level - 1).toDouble / (253.0 / 3.0)) / 1030.0).max(0.0).min(1.0) * pwmPeriod.toDouble).toInt
   }
 
   def setupPWM = {
@@ -189,7 +193,6 @@ class HostAPI extends Actor with ActorLogging {
           setPWMrun(power)
           if (power) {
             val value = ((level.toDouble / 255.0) * pwmPeriod).toInt
-            setPWMduty(value)
             value
           } else {
             0
@@ -198,7 +201,7 @@ class HostAPI extends Actor with ActorLogging {
           level
         }
       }
-      wellLightSettings = WellLightSettings(power, level)
+      wellLightSettings = WellLightSettings(power, pwmLogarithmicLevel(level))
       if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
       wellLightTickScheduler = context.system.scheduler.schedule (0 milliseconds, wellLightTickInterval, self, WellLightTick)
     case WellLightTick =>
@@ -208,20 +211,18 @@ class HostAPI extends Actor with ActorLogging {
           else currentWellLightSettings.level + WellLightSetttingStep
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
-        val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
-        setPWMduty(value)
-        logger.info("Dimming at " + value.toString + " toward " + wellLightSettings.level)
+        setPWMduty(currentWellLightSettings.level)
+        logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
         val newLevel = {
           if (currentWellLightSettings.level - WellLightSetttingStep < wellLightSettings.level) wellLightSettings.level
           else currentWellLightSettings.level - WellLightSetttingStep
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
-        val value = ((currentWellLightSettings.level.toDouble / 255.0) * pwmPeriod).toInt
-        setPWMduty(value)
-        logger.info("Dimming at " + value.toString + " toward " + wellLightSettings.level)
+        setPWMduty(currentWellLightSettings.level)
+        logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else {
-        logger.info("Stop welllight dimming")
+        logger.info("Stop well light dimming")
         if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
         wellLightTickScheduler = null
       }
