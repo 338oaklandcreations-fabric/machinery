@@ -37,6 +37,7 @@ object LedImageController {
   case object PwmTick
   case object ConnectionTick
 
+  case class LedImageControllerConnect(var connect: Boolean)
   case class Image(height: Int, width: Int, image: BufferedImage)
   case class Point(point: List[Double])
 
@@ -57,16 +58,18 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
 
   val logger =  LoggerFactory.getLogger(getClass)
 
+  val enableConnect = LedImageControllerConnect(false)
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, PwmTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
   var cursor = (0, 0)
   var image: Image = null
+
   def horizontalPixelSpacing = image.width / LedColumns
 
   override def preStart = {
     //val tmpImage = ImageIO.read(new File("src/main/resources/data/flames.jpeg"));
-    val tmpImage = ImageIO.read(new File("src/main/resources/data/underwater.png"));
+    val tmpImage = ImageIO.read(new File("data/underwater.png"));
     image = Image(tmpImage.getHeight, tmpImage.getWidth, tmpImage)
     logger.info ("Height - " + image.height)
     logger.info ("Width - " + image.width)
@@ -80,8 +83,10 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
       val connection = sender
       connection ! Register(self)
       context become connected(connection)
+    case LedImageControllerConnect(connect) =>
+      enableConnect.connect = connect
     case ConnectionTick =>
-      IO(Tcp) ! Connect(remote)
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
   def pixelByteString(cursor: (Int, Int)): ByteString = {
@@ -106,9 +111,13 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
       else cursor = (cursor._1, cursor._2 + 2)
       val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList)
       connection ! Write(bytes)
-    case "close" =>
-      logger.info("Shutting off Opc")
-      connection ! Close    case _: ConnectionClosed =>
+    case LedImageControllerConnect(connect) =>
+      if (!connect) {
+        logger.info("Shutting off Opc")
+        enableConnect.connect = connect
+        connection ! Close
+      }
+    case _: ConnectionClosed =>
       logger.info("Connection Closed")
       context become receive
   }

@@ -72,9 +72,9 @@ class HostAPI extends Actor with ActorLogging {
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
-  val WellLightSetttingStep = pwmPeriod / 1000
+  val WellLightSetttingStep = pwmPeriod / 100
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
-  val wellLightTickInterval = 5 milliseconds
+  val wellLightTickInterval = 2 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin

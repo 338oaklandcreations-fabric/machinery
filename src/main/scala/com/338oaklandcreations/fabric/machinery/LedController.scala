@@ -43,6 +43,7 @@ object LedController {
   case object LedControllerVersionRequest
   case object PatternNamesRequest
 
+  case class LedControllerConnect(var connect: Boolean)
   case class Heartbeat(timestamp: DateTime, messageType: Int, versionId: Int, currentPattern: Int,
                        red: Int, green: Int, blue: Int, speed: Int, intensity: Int, memberType: Int, patternName: String)
   case class Pattern(patternId: Int)
@@ -80,9 +81,10 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   var lastPatternNames = PatternNames(List())
   var ledControllerVersion = LedControllerVersion("", "")
   var isOff = false
-  var lastPatternSelect = PatternCommand(Some(3), Some(255), Some(255), Some(255), Some(0), Some(0))
+  var lastPatternSelect = PatternCommand(Some(3), Some(150), Some(0), Some(255), Some(150), Some(150))
 
-  var tickInterval = 5 seconds
+  val enableConnect = LedControllerConnect(false)
+  val tickInterval = 5 seconds
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, LedControllerTick)
 
   def receive = {
@@ -93,12 +95,16 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       logger.info("Connected: " + self.path.name)
       val connection = sender
       connection ! Register(self)
+      connection ! Write(ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_OPC_CONNECT))).toByteArray))
+      connection ! lastPatternSelect
       context.system.scheduler.scheduleOnce (10 milliseconds, self, PatternNamesRequest)
       context become connected(connection)
     case LedControllerVersionRequest =>
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
+    case LedControllerConnect(connect) =>
+      enableConnect.connect = connect
     case LedControllerTick =>
-      IO(Tcp) ! Connect(remote)
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
   def connected(connection: ActorRef): Receive = {
@@ -163,9 +169,13 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
           connection ! Write(bytes)
         }
       }
-    case "close" =>
-      logger.info("Shutting off LedController")
-      connection ! Close
+    case LedControllerConnect(connect) =>
+      if (!connect) {
+        logger.info("Shutting off LedController")
+        connection ! Write(ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_OPC_DISCONNECT))).toByteArray))
+        enableConnect.connect = connect
+        connection ! Close
+      }
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
       lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")

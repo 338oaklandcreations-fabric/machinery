@@ -23,6 +23,7 @@ import java.net.InetSocketAddress
 
 import akka.actor._
 import akka.util.Timeout
+import com._338oaklandcreations.fabric.machinery.LedImageController.LedImageControllerConnect
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -43,8 +44,12 @@ class MachineryController extends Actor with ActorLogging {
   logger.info("Starting Controller")
 
   val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledController")
-  val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledImageController")
+  val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("OPC_SERVER_PORT", "7890").toInt))), "ledImageController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
+
+  override def preStart = {
+    ledController ! LedControllerConnect(true)
+  }
 
   def receive = {
     case Pattern(patternId) =>
@@ -63,6 +68,13 @@ class MachineryController extends Actor with ActorLogging {
     case LedPower(on) =>
       logger.debug("LedPower")
       hostAPI forward LedPower(on)
+      if (on) {
+        ledController ! LedControllerConnect(true)
+        ledImageController ! LedImageControllerConnect(false)
+      } else {
+        ledController ! LedControllerConnect(false)
+        ledImageController ! LedImageControllerConnect(true)
+      }
     case LedControllerVersionRequest =>
       logger.debug("LedControllerVersionRequest")
       ledController forward LedControllerVersionRequest
