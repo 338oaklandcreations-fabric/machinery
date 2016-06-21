@@ -72,13 +72,16 @@ class HostAPI extends Actor with ActorLogging {
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
   val pwmPeriod = 10000000
-  val WellLightSetttingStep = pwmPeriod / 100
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val wellLightTickInterval = 2 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
+
+  def WellLightSetttingStep(level: Int): Int = {
+    ((level * Math.log(10) / 80).toInt / 20).min(1)
+  }
 
   def setPWMperiod(period: Int) = {
     if (isArm) {
@@ -207,16 +210,16 @@ class HostAPI extends Actor with ActorLogging {
     case WellLightTick =>
       if (wellLightSettings.level > currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level + WellLightSetttingStep > wellLightSettings.level) wellLightSettings.level
-          else currentWellLightSettings.level + WellLightSetttingStep
+          if (currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level)) > wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         setPWMduty(currentWellLightSettings.level)
         logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level - WellLightSetttingStep < wellLightSettings.level) wellLightSettings.level
-          else currentWellLightSettings.level - WellLightSetttingStep
+          if (currentWellLightSettings.level - WellLightSetttingStep(currentWellLightSettings.level) < wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level - WellLightSetttingStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         setPWMduty(currentWellLightSettings.level)

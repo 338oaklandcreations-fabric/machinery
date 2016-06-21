@@ -20,7 +20,7 @@
 package com._338oaklandcreations.fabric.machinery
 
 import java.awt.image.BufferedImage
-import java.io.File
+import java.io.InputStream
 import java.net.InetSocketAddress
 import javax.imageio.ImageIO
 
@@ -68,8 +68,9 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   def horizontalPixelSpacing = image.width / LedColumns
 
   override def preStart = {
-    //val tmpImage = ImageIO.read(new File("src/main/resources/data/flames.jpeg"));
-    val tmpImage = ImageIO.read(new File("data/underwater.png"));
+    //val tmpImage = ImageIO.read(new File("src/main/resources/data/flames.jpeg"))
+    val inputStream: InputStream = getClass.getResourceAsStream("/data/underwater.png")
+    val tmpImage = ImageIO.read(inputStream)
     image = Image(tmpImage.getHeight, tmpImage.getWidth, tmpImage)
     logger.info ("Height - " + image.height)
     logger.info ("Width - " + image.width)
