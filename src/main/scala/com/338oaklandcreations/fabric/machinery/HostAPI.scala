@@ -210,7 +210,7 @@ class HostAPI extends Actor with ActorLogging {
     case WellLightTick =>
       if (wellLightSettings.level > currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level)) > wellLightSettings.level) wellLightSettings.level
+          if (currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level) > wellLightSettings.level) wellLightSettings.level
           else currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
