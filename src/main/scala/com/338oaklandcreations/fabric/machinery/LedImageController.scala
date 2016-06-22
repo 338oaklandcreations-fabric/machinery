@@ -102,7 +102,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
       case x :: Nil =>
         data ++ pixelByteString((cursor._1 + x / LedRows * horizontalPixelSpacing, cursor._2 + x % LedColumns * horizontalPixelSpacing))
       case x :: y =>
-        println(data.length)
+        logger.info("data.length = " + data.length)
         data ++ pixelByteString((cursor._1 + x / LedRows * horizontalPixelSpacing, cursor._2 + x % LedColumns * horizontalPixelSpacing)) ++ assembledPixelData(data, y)
     }
   }
