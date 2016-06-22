@@ -30,6 +30,7 @@ import akka.util.ByteString
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
+import scala.sys.process.Process
 
 object LedImageController {
   def props(remote: InetSocketAddress) = Props(classOf[LedImageController], remote)
@@ -46,7 +47,15 @@ object LedImageController {
 
   val LedRows = 40
   val LedColumns = 80
-  val LedCount = LedRows * LedColumns
+  val isArm = {
+    val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
+    hosttype == "arm"
+  }
+
+  val LedCount = {
+    if (isArm) 75
+    else LedRows * LedColumns
+  }
   val NumBytes = LedCount * 3
 }
 
