@@ -67,7 +67,7 @@ class MachineryController extends Actor with ActorLogging {
       ledController forward HeartbeatRequest
     case LedPower(on) =>
       logger.debug("LedPower")
-      hostAPI forward LedPower(on)
+      // hostAPI forward LedPower(on)
       if (on) {
         ledController ! LedControllerConnect(true)
         ledImageController ! LedImageControllerConnect(false)
