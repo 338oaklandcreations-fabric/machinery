@@ -94,7 +94,7 @@ class HostAPI extends Actor with ActorLogging {
   def setPWMduty(duty: Int) = {
     if (isArm) {
       val dutyCommand = "sudo sh -c \"echo " + duty + " > " + PwmDevice + "/duty\""
-      logger.info("Set PWM duty to " + duty + "...")
+      //logger.info("Set PWM duty to " + duty + "...")
       Process(Seq("bash", "-c", dutyCommand)).!
     }
   }
