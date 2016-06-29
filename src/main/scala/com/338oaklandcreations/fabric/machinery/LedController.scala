@@ -103,6 +103,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
     case LedControllerConnect(connect) =>
       enableConnect.connect = connect
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
     case LedControllerTick =>
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
@@ -124,7 +125,10 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
             hb.memberType.getOrElse(0), hb.currentPatternName.getOrElse(""))
           logger.debug (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
-          lastPatternNames = PatternNames(pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || (i + 1) == OffPatternId) "" else (i + 1).toString + "-" + n}).filter(!_.isEmpty))
+          val names: List[String] = pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || (i + 1) == OffPatternId) "" else (i + 1).toString + "-" + n}) ++
+          List(LedImageController.UnderwaterId + "-" + LedImageController.UnderwaterName,
+            LedImageController.FireId + "-" + LedImageController.FireName)
+          lastPatternNames = PatternNames(names.filter(!_.isEmpty))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
           val date =
@@ -146,7 +150,10 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
     case LedControllerVersionRequest =>
       context.sender ! ledControllerVersion
     case PatternNamesRequest =>
-      if (lastPatternNames.names.isEmpty) connection ! Write(MessagePatternNamesRequest)
+      if (lastPatternNames.names.isEmpty) {
+        connection ! Write(MessagePatternNamesRequest)
+        Thread.sleep(1000)
+      }
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
       if (select.id == OffPatternId) {

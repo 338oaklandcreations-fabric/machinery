@@ -20,13 +20,13 @@
 package com._338oaklandcreations.fabric.machinery
 
 import java.awt.image.BufferedImage
-import java.io.InputStream
 import java.net.InetSocketAddress
 import javax.imageio.ImageIO
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -48,10 +48,17 @@ object LedImageController {
   val LedColumns = 80
   val LedCount = LedRows * LedColumns
   val NumBytes = LedCount * 3
+
+  val LowerId = 1000
+  val UnderwaterId = 1000
+  val UnderwaterName = "Underwater"
+  val FireId = 1001
+  val FireName = "Flames"
 }
 
 class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLogging {
 
+  import LedController.{Heartbeat, HeartbeatRequest, PatternSelect}
   import LedImageController._
   import Tcp._
   import context._
@@ -63,17 +70,24 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
   var cursor = (0, 0)
-  var image: Image = null
+  var images = Map.empty[Int, (Image, String)]
+  var currentImage: Image = null
 
-  def horizontalPixelSpacing = image.width / LedColumns
+  var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
+
+  def horizontalPixelSpacing = currentImage.width / LedColumns
 
   override def preStart = {
-    //val tmpImage = ImageIO.read(new File("src/main/resources/data/flames.jpeg"))
-    val inputStream: InputStream = getClass.getResourceAsStream("/data/underwater.png")
-    val tmpImage = ImageIO.read(inputStream)
-    image = Image(tmpImage.getHeight, tmpImage.getWidth, tmpImage)
-    logger.info ("Height - " + image.height)
-    logger.info ("Width - " + image.width)
+
+    def loadImage(filename: String, id: Int, name: String) = {
+      val image = ImageIO.read(getClass.getResourceAsStream(filename))
+      images = images + (id -> (Image(image.getHeight, image.getWidth, image), name))
+    }
+
+    loadImage("/data/underwater.png", UnderwaterId, UnderwaterName)
+    loadImage("/data/flames.jpeg", FireId, FireName)
+
+    currentImage = images(UnderwaterId)._1
   }
 
   def receive = {
@@ -84,15 +98,20 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
       val connection = sender
       connection ! Register(self)
       context become connected(connection)
+    case select: PatternSelect =>
+      selectImage(select)
+    case HeartbeatRequest =>
+      context.sender ! heartbeat
     case LedImageControllerConnect(connect) =>
       enableConnect.connect = connect
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
     case ConnectionTick =>
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
   def pixelByteString(cursor: (Int, Int)): ByteString = {
-    val pixel: Int = image.image.getRGB(cursor._1,
-      cursor._2 - (cursor._2 / image.height) * image.height)
+    val pixel: Int = currentImage.image.getRGB(cursor._1,
+      cursor._2 - (cursor._2 / currentImage.height) * currentImage.height)
     ByteString((pixel >> 16).toByte, (pixel >> 8).toByte, (pixel).toByte)
   }
 
@@ -107,12 +126,27 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
     }
   }
 
+  def selectImage(select: PatternSelect) = {
+    currentImage = images(select.id)._1
+    lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
+  }
+
+  def heartbeat: Heartbeat = {
+    val name = if (images.contains(lastPatternSelect.id)) images(lastPatternSelect.id)._2 else ""
+    Heartbeat(new DateTime, 0, 0, lastPatternSelect.id, lastPatternSelect.red, lastPatternSelect.green, lastPatternSelect.blue,
+      lastPatternSelect.speed, lastPatternSelect.intensity, 0, name)
+  }
+
   def connected(connection: ActorRef): Receive = {
     case PwmTick =>
-      if (cursor._2 >= image.height) cursor = (cursor._1, 1)
+      if (cursor._2 >= currentImage.height) cursor = (cursor._1, 1)
       else cursor = (cursor._1, cursor._2 + 2)
       val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList)
       connection ! Write(bytes)
+    case select: PatternSelect =>
+      selectImage(select)
+    case HeartbeatRequest =>
+      context.sender ! heartbeat
     case LedImageControllerConnect(connect) =>
       if (!connect) {
         logger.info("Shutting off Opc")

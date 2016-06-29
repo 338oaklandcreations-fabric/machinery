@@ -79,8 +79,8 @@ class HostAPI extends Actor with ActorLogging {
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
 
-  def WellLightSetttingStep(level: Int): Int = {
-    ((level * Math.log(10) / 80).toInt / 20).min(1)
+  def WellLightSettingStep(level: Int): Int = {
+    ((level * Math.log(10) / 80).toInt / 5).max(100)
   }
 
   def setPWMperiod(period: Int) = {
@@ -110,6 +110,10 @@ class HostAPI extends Actor with ActorLogging {
 
   def pwmLogarithmicLevel(level: Int): Int = {
     ((Math.pow(10.0, (level - 1).toDouble / (253.0 / 3.0)) / 1030.0).max(0.0).min(1.0) * pwmPeriod.toDouble).toInt
+  }
+
+  def pwmCommandLevel(level: Int): Int = {
+    (Math.log10(1030.0 * level) * (253.0 / 3.0) + 1.0).max(0.0).min(1.0).toInt
   }
 
   def setupPWM = {
@@ -210,27 +214,27 @@ class HostAPI extends Actor with ActorLogging {
     case WellLightTick =>
       if (wellLightSettings.level > currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level) > wellLightSettings.level) wellLightSettings.level
-          else currentWellLightSettings.level + WellLightSetttingStep(currentWellLightSettings.level)
+          if (currentWellLightSettings.level + WellLightSettingStep(currentWellLightSettings.level) > wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level + WellLightSettingStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         setPWMduty(currentWellLightSettings.level)
-        logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
+        //logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level - WellLightSetttingStep(currentWellLightSettings.level) < wellLightSettings.level) wellLightSettings.level
-          else currentWellLightSettings.level - WellLightSetttingStep(currentWellLightSettings.level)
+          if (currentWellLightSettings.level - WellLightSettingStep(currentWellLightSettings.level) < wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level - WellLightSettingStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
         setPWMduty(currentWellLightSettings.level)
-        logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
+        //logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else {
         logger.info("Stop well light dimming")
         if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
         wellLightTickScheduler = null
       }
     case WellLightSettingsRequest =>
-      context.sender ! wellLightSettings
+      context.sender ! WellLightSettings(wellLightSettings.powerOn, pwmCommandLevel(wellLightSettings.level))
     case Reboot => CommandResult(Process("sudo reboot").!)
     case HostTick => {
       val latestStartTime = {

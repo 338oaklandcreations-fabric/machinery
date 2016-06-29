@@ -23,7 +23,6 @@ import java.net.InetSocketAddress
 
 import akka.actor._
 import akka.util.Timeout
-import com._338oaklandcreations.fabric.machinery.LedImageController.LedImageControllerConnect
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -35,6 +34,7 @@ class MachineryController extends Actor with ActorLogging {
 
   import HostAPI._
   import LedController._
+  import LedImageController._
   import context._
 
   implicit val defaultTimeout = Timeout(3 seconds)
@@ -46,6 +46,8 @@ class MachineryController extends Actor with ActorLogging {
   val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledController")
   val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("OPC_SERVER_PORT", "7890").toInt))), "ledImageController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
+
+  var imageController = false
 
   override def preStart = {
     ledController ! LedControllerConnect(true)
@@ -64,17 +66,15 @@ class MachineryController extends Actor with ActorLogging {
       hostAPI forward HostStatisticsRequest
     case HeartbeatRequest =>
       logger.debug("HeartbeatRequest")
-      ledController forward HeartbeatRequest
+      Thread.sleep(1000)
+      if (imageController) {
+        ledImageController forward HeartbeatRequest
+      } else {
+        ledController forward HeartbeatRequest
+      }
     case LedPower(on) =>
       logger.debug("LedPower")
-      // hostAPI forward LedPower(on)
-      if (on) {
-        ledController ! LedControllerConnect(true)
-        ledImageController ! LedImageControllerConnect(false)
-      } else {
-        ledController ! LedControllerConnect(false)
-        ledImageController ! LedImageControllerConnect(true)
-      }
+      hostAPI forward LedPower(on)
     case LedControllerVersionRequest =>
       logger.debug("LedControllerVersionRequest")
       ledController forward LedControllerVersionRequest
@@ -83,7 +83,21 @@ class MachineryController extends Actor with ActorLogging {
       ledController forward PatternNamesRequest
     case select: PatternSelect =>
       logger.debug("PatternSelect")
-      ledController forward select
+      if (select.id >= LedImageController.LowerId) {
+        imageController = true
+        ledController ! LedControllerConnect(false)
+        Thread.sleep(500)
+        ledImageController ! LedImageControllerConnect(true)
+        Thread.sleep(500)
+        ledImageController forward select
+      } else {
+        imageController = false
+        ledImageController ! LedImageControllerConnect(false)
+        Thread.sleep(500)
+        ledController ! LedControllerConnect(true)
+        Thread.sleep(500)
+        ledController forward select
+      }
     case WellLightSettings(power, level) =>
       logger.debug("WellLightSettings")
       hostAPI forward WellLightSettings(power, level)

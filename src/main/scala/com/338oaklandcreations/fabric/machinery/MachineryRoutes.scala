@@ -71,6 +71,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       wellLightSettingsRequest ~
       logLevel
 
+  var staticPatternNames: String = ""
+
   val authenticationRejection = RejectionHandler {
     case AuthenticationRejection(message) :: _ => complete(400, message)
   }
@@ -191,13 +193,19 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   def patternNames = get {
     path("pattern" / "names") {
       respondWithMediaType(`application/json`) { ctx =>
-        val future = controller ? PatternNamesRequest
-        future onComplete {
-          case Success(success) => success match {
-            case patternNamesResult: PatternNames => ctx.complete(patternNamesResult.toJson.toString)
-            case _ => ctx.complete(400, UnknownCommandResponseString)
+        if (staticPatternNames != "") ctx.complete(staticPatternNames)
+        else {
+          val future = controller ? PatternNamesRequest
+          future onComplete {
+            case Success(success) => success match {
+              case patternNamesResult: PatternNames => {
+                staticPatternNames = patternNamesResult.toJson.toString
+                ctx.complete(staticPatternNames)
+              }
+              case _ => ctx.complete(400, UnknownCommandResponseString)
+            }
+            case Failure(failure) => ctx.complete(400, failure.toString)
           }
-          case Failure(failure) => ctx.complete(400, failure.toString)
         }
       }
     }
