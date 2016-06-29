@@ -123,7 +123,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   def pixelByteString(cursor: (Int, Int)): ByteString = {
     val pixel: Int = currentImage.image.getRGB(cursor._1,
       cursor._2 - (cursor._2 / currentImage.height) * currentImage.height)
-    ByteString((pixel >> 16).toByte, (pixel >> 8).toByte, (pixel).toByte)
+    ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int]): ByteString = {
