@@ -80,7 +80,7 @@ class HostAPI extends Actor with ActorLogging {
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
 
   def WellLightSettingStep(level: Int): Int = {
-    ((level * Math.log(10) / 80).toInt / 5).max(1000)
+    ((level * Math.log(10) / 80).toInt / 1).max(5000)
   }
 
   def setPWMperiod(period: Int) = {

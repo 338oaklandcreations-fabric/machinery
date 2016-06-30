@@ -45,8 +45,8 @@ object LedImageController {
   val ConnectionTickInterval = 5 seconds
   val TickInterval = 5 milliseconds
 
-  val LedRows = 40
-  val LedColumns = 80
+  val LedRows = 10
+  val LedColumns = 10
 
   val isArm = {
     val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
@@ -54,7 +54,7 @@ object LedImageController {
   }
 
   val LedCount = {
-    if (isArm) 100
+    if (isArm) 72
     else LedRows * LedColumns
   }
 
@@ -65,6 +65,8 @@ object LedImageController {
   val UnderwaterName = "Underwater"
   val FireId = 1001
   val FireName = "Flames"
+  val SparkleId = 1002
+  val SparkleName = "Sparkle"
 }
 
 class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLogging {
@@ -96,7 +98,8 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
     }
 
     loadImage("/data/underwater.png", UnderwaterId, UnderwaterName)
-    loadImage("/data/flames.jpeg", FireId, FireName)
+    loadImage("/data/flames.jpg", FireId, FireName)
+    loadImage("/data/sparkle.jpg", SparkleId, SparkleName)
 
     currentImage = images(UnderwaterId)._1
   }
@@ -121,8 +124,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   }
 
   def pixelByteString(cursor: (Int, Int)): ByteString = {
-    val pixel: Int = currentImage.image.getRGB(cursor._1,
-      cursor._2 - (cursor._2 / currentImage.height) * currentImage.height)
+    val pixel: Int = currentImage.image.getRGB(cursor._1, cursor._2 - (cursor._2 / currentImage.height) * currentImage.height)
     ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
   }
 

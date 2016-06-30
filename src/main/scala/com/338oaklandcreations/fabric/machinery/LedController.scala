@@ -127,7 +127,9 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
         case Msg.PatternNames(pn) =>
           val names: List[String] = pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || (i + 1) == OffPatternId) "" else (i + 1).toString + "-" + n}) ++
           List(LedImageController.UnderwaterId + "-" + LedImageController.UnderwaterName,
-            LedImageController.FireId + "-" + LedImageController.FireName)
+            LedImageController.FireId + "-" + LedImageController.FireName,
+            LedImageController.SparkleId + "-" + LedImageController.SparkleName
+          )
           lastPatternNames = PatternNames(names.filter(!_.isEmpty))
           logger.info (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
