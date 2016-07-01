@@ -45,7 +45,7 @@ object LedImageController {
   val ConnectionTickInterval = 5 seconds
   val TickInterval = 5 milliseconds
 
-  val LedRows = 10
+  val LedRows = 72
   val LedColumns = 10
 
   val isArm = {
@@ -134,7 +134,6 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
       case x :: Nil =>
         data ++ pixelByteString((cursor._1 + x / LedRows * horizontalPixelSpacing, cursor._2 + x % LedColumns * horizontalPixelSpacing))
       case x :: y =>
-        //logger.info("data.length = " + data.length + ", x = " + x + ", y.length = " + y.length)
         data ++ pixelByteString((cursor._1 + x / LedRows * horizontalPixelSpacing, cursor._2 + x % LedColumns * horizontalPixelSpacing)) ++ assembledPixelData(data, y)
     }
   }
