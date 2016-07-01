@@ -43,10 +43,10 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 5 milliseconds
+  val TickInterval = 10 milliseconds
 
-  val LedRows = 72
-  val LedColumns = 10
+  val LedRows = 10
+  val LedColumns = 72
 
   val isArm = {
     val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
@@ -99,7 +99,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
 
     loadImage("/data/underwater.png", UnderwaterId, UnderwaterName)
     loadImage("/data/flames.jpg", FireId, FireName)
-    loadImage("/data/sparkle.jpg", SparkleId, SparkleName)
+    loadImage("/data/sparkle.png", SparkleId, SparkleName)
 
     currentImage = images(UnderwaterId)._1
   }
@@ -152,7 +152,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   def connected(connection: ActorRef): Receive = {
     case PwmTick =>
       if (cursor._2 >= currentImage.height) cursor = (cursor._1, 1)
-      else cursor = (cursor._1, cursor._2 + 2)
+      else cursor = (cursor._1, cursor._2 + lastPatternSelect.speed / 10)
       val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList)
       connection ! Write(bytes)
     case select: PatternSelect =>
