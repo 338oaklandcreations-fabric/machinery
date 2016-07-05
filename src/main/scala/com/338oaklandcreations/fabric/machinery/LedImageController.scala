@@ -35,7 +35,7 @@ import scala.sys.process.Process
 object LedImageController {
   def props(remote: InetSocketAddress) = Props(classOf[LedImageController], remote)
 
-  case object PwmTick
+  case object FrameTick
   case object ConnectionTick
 
   case class LedImageControllerConnect(var connect: Boolean)
@@ -43,7 +43,7 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 10 milliseconds
+  val TickInterval = 20 milliseconds
 
   val LedRows = 10
   val LedColumns = 72
@@ -67,6 +67,8 @@ object LedImageController {
   val FireName = "Flames"
   val SparkleId = 1002
   val SparkleName = "Sparkle"
+  val SeahorseNebulaId = 1003
+  val SeahirseNebulaName = "Seahorse"
 }
 
 class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLogging {
@@ -79,10 +81,10 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   val logger =  LoggerFactory.getLogger(getClass)
 
   val enableConnect = LedImageControllerConnect(false)
-  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, PwmTick)
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
-  var cursor = (0, 0)
+  var globalCursor = (0, 0)
   var images = Map.empty[Int, (Image, String)]
   var currentImage: Image = null
 
@@ -100,6 +102,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
     loadImage("/data/underwater.png", UnderwaterId, UnderwaterName)
     loadImage("/data/flames.jpg", FireId, FireName)
     loadImage("/data/sparkle.png", SparkleId, SparkleName)
+    loadImage("/data/seahorse.jpg", SeahorseNebulaId, SeahirseNebulaName)
 
     currentImage = images(UnderwaterId)._1
   }
@@ -124,17 +127,17 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   }
 
   def pixelByteString(cursor: (Int, Int)): ByteString = {
-    val pixel: Int = currentImage.image.getRGB(cursor._1, cursor._2 - (cursor._2 / currentImage.height) * currentImage.height)
+    val pixel: Int = currentImage.image.getRGB(cursor._1, cursor._2)
     ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
   }
 
-  def assembledPixelData(data: ByteString, offsets: List[Int]): ByteString = {
+  def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
     offsets match {
       case Nil => data
       case x :: Nil =>
-        data ++ pixelByteString((cursor._1 + x / LedRows * horizontalPixelSpacing, cursor._2 + x % LedColumns * horizontalPixelSpacing))
+        data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2))
       case x :: y =>
-        data ++ pixelByteString((cursor._1 + x / LedRows * horizontalPixelSpacing, cursor._2 + x % LedColumns * horizontalPixelSpacing)) ++ assembledPixelData(data, y)
+        data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2)) ++ assembledPixelData(data, y, cursor)
     }
   }
 
@@ -150,10 +153,10 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   }
 
   def connected(connection: ActorRef): Receive = {
-    case PwmTick =>
-      if (cursor._2 >= currentImage.height) cursor = (cursor._1, 1)
-      else cursor = (cursor._1, cursor._2 + lastPatternSelect.speed / 10)
-      val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList)
+    case FrameTick =>
+      if (globalCursor._2 >= currentImage.height) globalCursor = (globalCursor._1, 1)
+      else globalCursor = (globalCursor._1, globalCursor._2 + lastPatternSelect.speed / 10)
+      val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
       connection ! Write(bytes)
     case select: PatternSelect =>
       selectImage(select)
