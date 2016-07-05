@@ -43,7 +43,7 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 20 milliseconds
+  val TickInterval = 40 milliseconds
 
   val LedRows = 10
   val LedColumns = 72
