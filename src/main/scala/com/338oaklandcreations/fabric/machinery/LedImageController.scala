@@ -47,6 +47,7 @@ object LedImageController {
 
   val LedRows = 10
   val LedColumns = 72
+  val SpeedModifier = 10
 
   val isArm = {
     val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
@@ -154,8 +155,8 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
 
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
-      if (globalCursor._2 >= currentImage.height) globalCursor = (globalCursor._1, 1)
-      else globalCursor = (globalCursor._1, globalCursor._2 + lastPatternSelect.speed / 10)
+      if (globalCursor._2 + lastPatternSelect.speed / SpeedModifier >= currentImage.height) globalCursor = (globalCursor._1, 1)
+      else globalCursor = (globalCursor._1, globalCursor._2 + lastPatternSelect.speed / SpeedModifier)
       val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
       connection ! Write(bytes)
     case select: PatternSelect =>
