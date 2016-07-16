@@ -43,7 +43,7 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 100 milliseconds
+  val TickInterval = 30 milliseconds
 
   val LedRows = 10
   val LedColumns = 72
@@ -148,6 +148,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
 
   def selectImage(select: PatternSelect) = {
     currentImage = images(select.id)._1
+    globalCursor = (0, 0)
     lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
   }
 

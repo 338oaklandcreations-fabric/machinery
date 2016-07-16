@@ -158,7 +158,7 @@ class HostAPI extends Actor with ActorLogging {
 
   def currentCpu: Double = {
     if (isArm) {
-      Process("bash" :: "-c" :: "mpstat | awk 'END {print $11}'" :: Nil).!!.toDouble.min(100.0)
+      100.0 - Process("bash" :: "-c" :: "mpstat | awk 'END {print $12}'" :: Nil).!!.toDouble.min(100.0)
     } else {
       Process("bash" :: "-c" :: "ps aux | awk '{sum += $3} END {print sum}'" :: Nil).!!.toDouble.min(100.0)
     }
