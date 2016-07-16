@@ -43,7 +43,7 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 40 milliseconds
+  val TickInterval = 100 milliseconds
 
   val LedRows = 10
   val LedColumns = 72
@@ -70,6 +70,8 @@ object LedImageController {
   val SparkleName = "Sparkle"
   val SeahorseNebulaId = 1003
   val SeahirseNebulaName = "Seahorse"
+  val StripesId = 1004
+  val StripesName = "Stripes"
 }
 
 class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLogging {
@@ -86,6 +88,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
   var globalCursor = (0, 0)
+  var direction = 1
   var images = Map.empty[Int, (Image, String)]
   var currentImage: Image = null
 
@@ -104,6 +107,7 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
     loadImage("/data/flames.jpg", FireId, FireName)
     loadImage("/data/sparkle.png", SparkleId, SparkleName)
     loadImage("/data/seahorse.jpg", SeahorseNebulaId, SeahirseNebulaName)
+    loadImage("/data/stripes.png", StripesId, StripesName)
 
     currentImage = images(UnderwaterId)._1
   }
@@ -155,8 +159,9 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
 
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
-      if (globalCursor._2 + lastPatternSelect.speed / SpeedModifier >= currentImage.height) globalCursor = (globalCursor._1, 1)
-      else globalCursor = (globalCursor._1, globalCursor._2 + lastPatternSelect.speed / SpeedModifier)
+      if (globalCursor._2 + lastPatternSelect.speed / SpeedModifier >= currentImage.height) direction = -1
+      else if (globalCursor._2 - lastPatternSelect.speed / SpeedModifier < 0) direction = 1
+      globalCursor = (globalCursor._1, globalCursor._2 + direction * lastPatternSelect.speed / SpeedModifier)
       val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
       connection ! Write(bytes)
     case select: PatternSelect =>

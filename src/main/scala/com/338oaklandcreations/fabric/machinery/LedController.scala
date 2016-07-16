@@ -129,7 +129,8 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
           List(LedImageController.UnderwaterId + "-" + LedImageController.UnderwaterName,
             LedImageController.FireId + "-" + LedImageController.FireName,
             LedImageController.SparkleId + "-" + LedImageController.SparkleName,
-            LedImageController.SeahorseNebulaId + "-" + LedImageController.SeahirseNebulaName
+            LedImageController.SeahorseNebulaId + "-" + LedImageController.SeahirseNebulaName,
+            LedImageController.StripesId + "-" + LedImageController.StripesName
           )
           lastPatternNames = PatternNames(names.filter(!_.isEmpty))
           logger.info (lastPatternNames.toString)
