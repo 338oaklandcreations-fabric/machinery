@@ -107,6 +107,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     try {
       while (r.hasNext) {
         val fileName = r.next
+        logger.info("Found image file: " + fileName)
         val id = fileName.split('-')(0).toInt
         val name = fileName.split('-')(1).split('.')(0)
         loadImage("/data/" + fileName, id, name)
