@@ -102,7 +102,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       PatternNames = PatternNames :+ id + "-" + name
     }
 
-    val d = scala.io.Source.fromURL(getClass.getResource("/data"))
+    val d = scala.io.Source.fromURL(getClass.getResource("/data/"))
     val r = d.getLines
 //    try {
       while (r.hasNext) {
