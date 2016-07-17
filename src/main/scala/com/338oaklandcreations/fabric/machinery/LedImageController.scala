@@ -43,11 +43,12 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 30 milliseconds
+  val TickInterval = 16 milliseconds
 
   val LedRows = 10
   val LedColumns = 72
-  val SpeedModifier = 10
+  val SpeedModifier = 1
+  val PixelHop = 20
 
   val isArm = {
     val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
@@ -55,26 +56,19 @@ object LedImageController {
   }
 
   val LedCount = {
-    if (isArm) 72
-    else LedRows * LedColumns
+    if (isArm) LedColumns
+    else LedColumns
   }
 
   val NumBytes = LedCount * 3
 
   val LowerId = 1000
-  val UnderwaterId = 1000
-  val UnderwaterName = "Underwater"
-  val FireId = 1001
-  val FireName = "Flames"
-  val SparkleId = 1002
-  val SparkleName = "Sparkle"
-  val SeahorseNebulaId = 1003
-  val SeahirseNebulaName = "Seahorse"
-  val StripesId = 1004
-  val StripesName = "Stripes"
+
+  var PatternNames = List.empty[String]
+
 }
 
-class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLogging {
+class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogging {
 
   import LedController.{Heartbeat, HeartbeatRequest, PatternSelect}
   import LedImageController._
@@ -89,27 +83,41 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
 
   var globalCursor = (0, 0)
   var direction = 1
+  var blending = 0
+  var baseBlending = 0
+  var lastFrame: ByteString = null
+  var currentFrame: ByteString = null
   var images = Map.empty[Int, (Image, String)]
   var currentImage: Image = null
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
 
-  def horizontalPixelSpacing = currentImage.width / LedColumns
+  def horizontalPixelSpacing = currentImage.width / (LedColumns + 1)
 
   override def preStart = {
 
     def loadImage(filename: String, id: Int, name: String) = {
       val image = ImageIO.read(getClass.getResourceAsStream(filename))
       images = images + (id -> (Image(image.getHeight, image.getWidth, image), name))
+      PatternNames = PatternNames :+ id + "-" + name
     }
 
-    loadImage("/data/underwater.png", UnderwaterId, UnderwaterName)
-    loadImage("/data/flames.jpg", FireId, FireName)
-    loadImage("/data/sparkle.png", SparkleId, SparkleName)
-    loadImage("/data/seahorse.jpg", SeahorseNebulaId, SeahirseNebulaName)
-    loadImage("/data/stripes.png", StripesId, StripesName)
-
-    currentImage = images(UnderwaterId)._1
+    val d = scala.io.Source.fromURL(getClass.getResource("/data"))
+    val r = d.getLines
+    try {
+      while (r.hasNext) {
+        val fileName = r.next
+        val id = fileName.split('-')(0).toInt
+        val name = fileName.split('-')(1).split('.')(0)
+        loadImage("/data/" + fileName, id, name)
+      }
+      currentImage = images(LowerId)._1
+    } catch {
+      case _: Throwable => {
+        logger.error("Image files are not in the correct format")
+        throw new IllegalArgumentException
+      }
+    }
   }
 
   def receive = {
@@ -132,8 +140,13 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   }
 
   def pixelByteString(cursor: (Int, Int)): ByteString = {
-    val pixel: Int = currentImage.image.getRGB(cursor._1, cursor._2)
-    ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
+    val pixel: Int = try {
+      currentImage.image.getRGB(cursor._1, cursor._2)
+    } catch {
+      case _: Throwable => throw new IllegalArgumentException
+    }
+    if (isArm) ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
+    else ByteString((pixel >> 16).toByte, (pixel >> 8).toByte, (pixel).toByte)
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
@@ -147,8 +160,12 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
   }
 
   def selectImage(select: PatternSelect) = {
-    currentImage = images(select.id)._1
-    globalCursor = (0, 0)
+    if (currentImage != images(select.id)._1) {
+      currentImage = images(select.id)._1
+      globalCursor = (0, 0)
+      lastFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+      currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+    }
     lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
   }
 
@@ -158,13 +175,33 @@ class LedImageController(remote: InetSocketAddress)  extends Actor with ActorLog
       lastPatternSelect.speed, lastPatternSelect.intensity, 0, name)
   }
 
+  def blendedFrames: ByteString = {
+    ByteString(lastFrame.zip(currentFrame).map({ case (l, c) => {
+      if (l == c) l
+      else {
+        val lB = if (l < 0) l + 255 else l
+        val cB = if (c < 0) c + 255 else c
+        val blendedByte = (lB + (cB - lB) * (1.0 - blending.toDouble / baseBlending.toDouble)).toByte
+        blendedByte
+      }
+    } }).toArray)
+  }
+
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
-      if (globalCursor._2 + lastPatternSelect.speed / SpeedModifier >= currentImage.height) direction = -1
-      else if (globalCursor._2 - lastPatternSelect.speed / SpeedModifier < 0) direction = 1
-      globalCursor = (globalCursor._1, globalCursor._2 + direction * lastPatternSelect.speed / SpeedModifier)
-      val bytes = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
-      connection ! Write(bytes)
+      if (blending <= 0) {
+        blending = (255 - lastPatternSelect.speed) / SpeedModifier
+        baseBlending = blending
+        if (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1)) direction = -1
+        else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
+        globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
+        lastFrame =
+          if (currentFrame == null) ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+          else currentFrame
+        currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+      }
+      blending = blending - 1
+      connection ! Write(blendedFrames)
     case select: PatternSelect =>
       selectImage(select)
     case HeartbeatRequest =>
