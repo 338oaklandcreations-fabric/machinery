@@ -102,23 +102,20 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       PatternNames = PatternNames :+ id + "-" + name
     }
 
-    val d = scala.io.Source.fromURL(getClass.getResource("/data/"))
-    val r = d.getLines
-//    try {
-      while (r.hasNext) {
-        val fileName = r.next
-        logger.info("Found image file: " + fileName)
-        val id = fileName.split('-')(0).toInt
-        val name = fileName.split('-')(1).split('.')(0)
-        loadImage("/data/" + fileName, id, name)
+    List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png").foreach({ filename =>
+      try {
+        logger.info("Found image file: " + filename)
+        val id = filename.split('-')(0).toInt
+        val name = filename.split('-')(1).split('.')(0)
+        loadImage("/data/" + filename, id, name)
+        currentImage = images(LowerId)._1
+      } catch {
+        case _: Throwable => {
+          logger.error("Image files are not in the correct format")
+          throw new IllegalArgumentException
+        }
       }
-      currentImage = images(LowerId)._1
-//    } catch {
-//      case _: Throwable => {
-//        logger.error("Image files are not in the correct format")
-//        throw new IllegalArgumentException
-//      }
-//    }
+    })
   }
 
   def receive = {
