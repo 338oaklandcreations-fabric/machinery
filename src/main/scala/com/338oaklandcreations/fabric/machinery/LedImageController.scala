@@ -102,20 +102,20 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       PatternNames = PatternNames :+ id + "-" + name
     }
 
-    List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png").foreach({ filename =>
+    List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg").foreach({ filename =>
       try {
         logger.info("Found image file: " + filename)
         val id = filename.split('-')(0).toInt
         val name = filename.split('-')(1).split('.')(0)
         loadImage("/data/" + filename, id, name)
-        currentImage = images(LowerId)._1
       } catch {
-        case _: Throwable => {
+        case x: Throwable => {
           logger.error("Image files are not in the correct format")
           throw new IllegalArgumentException
         }
       }
     })
+    currentImage = images(LowerId)._1
   }
 
   def receive = {
