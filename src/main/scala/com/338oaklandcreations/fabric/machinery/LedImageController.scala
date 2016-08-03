@@ -102,7 +102,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       PatternNames = PatternNames :+ id + "-" + name
     }
 
-    List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg").foreach({ filename =>
+    List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg",
+         "1005-Gold Bubbles.png", "1006-Grape Sunset.png", "1007-Purple Bubbles.png").foreach({ filename =>
       try {
         logger.info("Found image file: " + filename)
         val id = filename.split('-')(0).toInt
@@ -188,7 +189,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
       if (blending <= 0) {
-        blending = (255 - lastPatternSelect.speed) / SpeedModifier
+        blending = (512 - lastPatternSelect.speed * 2) / SpeedModifier
         baseBlending = blending
         if (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1)) direction = -1
         else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
