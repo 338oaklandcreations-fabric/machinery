@@ -43,7 +43,7 @@ object LedImageController {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 16 milliseconds
+  val TickInterval = 12 milliseconds
 
   val LedRows = 10
   val LedColumns = 72
@@ -99,13 +99,21 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     def loadImage(filename: String, id: Int, name: String) = {
       val image = ImageIO.read(getClass.getResourceAsStream(filename))
       images = images + (id -> (Image(image.getHeight, image.getWidth, image), name))
-      PatternNames = PatternNames :+ id + "-" + name
     }
 
-    List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg",
-         "1005-Gold Bubbles.png", "1006-Grape Sunset.png", "1007-Purple Bubbles.png").foreach({ filename =>
+    val imageList = List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg",
+         "1005-Gold Bubbles.png", "1006-Grape Sunset.png", "1007-Purple Bubbles.png")
+    imageList.foreach({ filename =>
       try {
-        logger.info("Found image file: " + filename)
+        logger.info("Identifying image file: " + filename)
+        val id = filename.split('-')(0).toInt
+        val name = filename.split('-')(1).split('.')(0)
+        PatternNames = PatternNames :+ id + "-" + name
+      }
+    })
+    imageList.foreach({ filename =>
+      try {
+        logger.info("Loading image file: " + filename)
         val id = filename.split('-')(0).toInt
         val name = filename.split('-')(1).split('.')(0)
         loadImage("/data/" + filename, id, name)
