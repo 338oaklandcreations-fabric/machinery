@@ -150,7 +150,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
     case PatternNamesRequest =>
       if (lastPatternNames.names.isEmpty) {
         connection ! Write(MessagePatternNamesRequest)
-        Thread.sleep(5000)
+        Thread.sleep(500)
       }
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
