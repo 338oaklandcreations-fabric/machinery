@@ -23,6 +23,7 @@ import java.net.InetSocketAddress
 
 import akka.actor._
 import akka.util.Timeout
+import com._338oaklandcreations.fabric.machinery.ApisAPI.{BodyLightPattern, PooferPattern}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -46,6 +47,7 @@ class MachineryController extends Actor with ActorLogging {
   val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledController")
   val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("OPC_SERVER_PORT", "7890").toInt))), "ledImageController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
+  val apisAPI = actorOf(Props[ApisAPI], "apisAPI")
 
   var imageController = false
 
@@ -54,7 +56,6 @@ class MachineryController extends Actor with ActorLogging {
   }
 
   def receive = {
-    case Pattern(patternId) =>
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
       hostAPI forward TimeSeriesRequestCPU
@@ -104,6 +105,12 @@ class MachineryController extends Actor with ActorLogging {
     case WellLightSettingsRequest =>
       logger.debug("WellLightSettingsRequest")
       hostAPI forward WellLightSettingsRequest
+    case BodyLightPattern(id, level) =>
+      logger.debug("BodyLightsPattern")
+      apisAPI forward BodyLightPattern(id, level)
+    case PooferPattern(id) =>
+      logger.debug("PooferPattern")
+      apisAPI forward PooferPattern(id)
     case NodeConnectionClosed =>
     case unknown => logger.debug("Received Unknown message: " + unknown.toString)
   }

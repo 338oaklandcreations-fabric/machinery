@@ -21,6 +21,7 @@ package com._338oaklandcreations.fabric.machinery
 
 import HostAPI._
 import LedController._
+import com._338oaklandcreations.fabric.machinery.ApisAPI.{PooferPattern, BodyLightPattern}
 import org.joda.time.DateTime
 import org.joda.time.format.{ISODateTimeFormat, DateTimeFormatter}
 import spray.json._
@@ -60,5 +61,8 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
   implicit val patternJson = jsonFormat1(Pattern)
   implicit val ledControllerVersionJson = jsonFormat2(LedControllerVersion)
   implicit val wellLightSettingsJson = jsonFormat2(WellLightSettings)
+
+  implicit val bodyLightsJson = jsonFormat2(BodyLightPattern)
+  implicit val pooferJson = jsonFormat1(PooferPattern)
 
 }

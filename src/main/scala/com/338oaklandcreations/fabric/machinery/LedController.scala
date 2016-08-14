@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 
 object LedController {
+
   def props(remote: InetSocketAddress) = Props(classOf[LedController], remote)
 
   case object LedControllerTick

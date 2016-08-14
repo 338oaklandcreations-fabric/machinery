@@ -44,25 +44,21 @@ object HostAPI {
   case class ConcerningMessages(logfile: String, warn: Int, error: Int, fatal: Int)
   case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double], concerning: List[ConcerningMessages])
 
-  val isArm = {
-    val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
-    hosttype == "arm"
-  }
-
-  val ProcessTimeFormatter = {
-    if (isArm) DateTimeFormat.forPattern("H:mm")
-    else DateTimeFormat.forPattern("hh:mma")
-  }
   val MonthDayTimeFormatter = DateTimeFormat.forPattern("MMMdd")
 }
 
-class HostAPI extends Actor with ActorLogging {
+class HostAPI extends Actor with ActorLogging with HostActor {
 
   import HostAPI._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val logger =  LoggerFactory.getLogger(getClass)
+  implicit val logger = LoggerFactory.getLogger(getClass)
+
+  val ProcessTimeFormatter = {
+    if (isArm) DateTimeFormat.forPattern("H:mm")
+    else DateTimeFormat.forPattern("hh:mma")
+  }
 
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
@@ -71,79 +67,17 @@ class HostAPI extends Actor with ActorLogging {
   var currentWellLightSettings: WellLightSettings = null
   var tickInterval = 5 seconds
   var hoursToTrack = 6 hours
-  val pwmPeriod = 10000000
+  val PwmPeriod = 10000000
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val wellLightTickInterval = 2 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
-  def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
 
-  def WellLightSettingStep(level: Int): Int = {
-    ((level * Math.log(10) / 80 * 2).toInt).max(15000)
-  }
-
-  def setPWMperiod(period: Int) = {
-    if (isArm) {
-      val periodCommand = "sudo sh -c \"echo " + period + " > " + PwmDevice + "/period\""
-      logger.info("Set PWM period to " + period + "...")
-      Process(Seq("bash", "-c", periodCommand)).!
-    }
-  }
-
-  def setPWMduty(duty: Int) = {
-    if (isArm) {
-      val dutyCommand = "sudo sh -c \"echo " + duty + " > " + PwmDevice + "/duty\""
-      //logger.info("Set PWM duty to " + duty + "...")
-      Process(Seq("bash", "-c", dutyCommand)).!
-    }
-  }
-
-  def setPWMrun(on: Boolean) = {
-    if (isArm) {
-      val value = if (on) "1" else "0"
-      val enableCommand = "sudo sh -c \"echo " + value + " > " + PwmDevice + "/run\""
-      logger.info("Set PWM pin run to " + value + "...")
-      Process(Seq("bash", "-c", enableCommand)).!
-    }
-  }
-
-  def pwmLogarithmicLevel(level: Int): Int = {
-    ((Math.pow(10.0, (level - 1).toDouble / (253.0 / 3.0)) / 1030.0).max(0.0).min(1.0) * pwmPeriod.toDouble).toInt
-  }
-
-  def pwmCommandLevel(level: Int): Int = {
-    (Math.log10(1030.0 * level) * (253.0 / 3.0) + 1.0).max(0.0).min(1.0).toInt
-  }
-
   def setupPWM = {
-    setPWMperiod(pwmPeriod)
-    setPWMduty(0)
-    setPWMrun(false)
-  }
-
-  def setupGPIO(pin: String) = {
-    if (isArm) {
-      val enableCommand = "sudo sh -c \"echo " + pin + " > /sys/class/gpio/export\""
-      logger.info("Enable ledPower pin...")
-      Process(Seq("bash", "-c", enableCommand)).!
-      val directionCommand = "sudo sh -c \"echo out > " + pinFilename(pin) + "/direction\""
-      logger.info("Direction for ledPower pin...")
-      Process(Seq("bash", "-c", directionCommand)).!
-      val valueCommand = "sudo sh -c \"echo 1 > "+ pinFilename(pin) + "/value\""
-      logger.info("Value for ledPower pin...")
-      Process(Seq("bash", "-c", valueCommand)).!
-    }
-  }
-
-  def setGPIOpin(pinValue: Boolean, pin: String) = {
-    if (isArm) {
-      val value = if (pinValue) "1" else "0"
-      val valueCommand = "sudo sh -c \"echo " + value + " > " + pinFilename(pin) + "/value\""
-      Process(Seq("bash", "-c", valueCommand)).!
-      val setPinResult = ("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
-      setPinResult
-    } else if (pinValue) "1" else "0"
+    setPWMperiod(PwmPeriod, PwmDevice)
+    setPWMduty(0, PwmDevice)
+    setPWMrun(false, PwmDevice)
   }
 
   override def preStart(): Unit = {
@@ -197,9 +131,9 @@ class HostAPI extends Actor with ActorLogging {
     case WellLightSettings(power, level) =>
       val pinValue = {
         if (isArm) {
-          setPWMrun(power)
+          setPWMrun(power, PwmDevice)
           if (power) {
-            val value = ((level.toDouble / 255.0) * pwmPeriod).toInt
+            val value = ((level.toDouble / 255.0) * PwmPeriod).toInt
             value
           } else {
             0
@@ -208,25 +142,25 @@ class HostAPI extends Actor with ActorLogging {
           level
         }
       }
-      wellLightSettings = WellLightSettings(power, pwmLogarithmicLevel(level))
+      wellLightSettings = WellLightSettings(power, pwmLogarithmicLevel(level, PwmPeriod))
       if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
       wellLightTickScheduler = context.system.scheduler.schedule (0 milliseconds, wellLightTickInterval, self, WellLightTick)
     case WellLightTick =>
       if (wellLightSettings.level > currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level + WellLightSettingStep(currentWellLightSettings.level) > wellLightSettings.level) wellLightSettings.level
-          else currentWellLightSettings.level + WellLightSettingStep(currentWellLightSettings.level)
+          if (currentWellLightSettings.level + PwmStep(currentWellLightSettings.level) > wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level + PwmStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
-        setPWMduty(currentWellLightSettings.level)
+        setPWMduty(currentWellLightSettings.level, PwmDevice)
         //logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else if (wellLightSettings.level < currentWellLightSettings.level) {
         val newLevel = {
-          if (currentWellLightSettings.level - WellLightSettingStep(currentWellLightSettings.level) < wellLightSettings.level) wellLightSettings.level
-          else currentWellLightSettings.level - WellLightSettingStep(currentWellLightSettings.level)
+          if (currentWellLightSettings.level - PwmStep(currentWellLightSettings.level) < wellLightSettings.level) wellLightSettings.level
+          else currentWellLightSettings.level - PwmStep(currentWellLightSettings.level)
         }
         currentWellLightSettings = WellLightSettings(currentWellLightSettings.powerOn, newLevel)
-        setPWMduty(currentWellLightSettings.level)
+        setPWMduty(currentWellLightSettings.level, PwmDevice)
         //logger.info("Dimming at " + currentWellLightSettings.level.toString + " toward " + wellLightSettings.level)
       } else {
         logger.info("Stop well light dimming")

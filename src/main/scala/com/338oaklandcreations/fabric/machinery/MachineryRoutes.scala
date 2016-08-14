@@ -45,6 +45,7 @@ class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
 trait MachineryRoutes extends HttpService with UserAuthentication {
 
   import HostAPI._
+  import ApisAPI._
   import LedController._
   import MachineryJsonProtocol._
   import UserAuthentication._
@@ -69,7 +70,9 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       patternNames ~
       setWellLightSettings ~
       wellLightSettingsRequest ~
-      logLevel
+      logLevel ~
+      bodyLightsRequest ~
+      pooferRequest
 
   var staticPatternNames: String = ""
 
@@ -252,4 +255,23 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       }
     }
   }
+  def bodyLightsRequest = post {
+    path("bodyLights") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val request = ctx.request.entity.data.asString.parseJson.convertTo[BodyLightPattern]
+        controller ! request
+        ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
+  def pooferRequest = post {
+    path("poofer") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val request = ctx.request.entity.data.asString.parseJson.convertTo[PooferPattern]
+        controller ! request
+        ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
+
 }

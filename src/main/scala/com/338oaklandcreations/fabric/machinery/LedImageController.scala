@@ -30,9 +30,8 @@ import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
-import scala.sys.process.Process
 
-object LedImageController {
+object LedImageController extends HostActor {
   def props(remote: InetSocketAddress) = Props(classOf[LedImageController], remote)
 
   case object FrameTick
@@ -49,11 +48,6 @@ object LedImageController {
   val LedColumns = 72
   val SpeedModifier = 1
   val PixelHop = 20
-
-  val isArm = {
-    val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")
-    hosttype == "arm"
-  }
 
   val LedCount = {
     if (isArm) LedColumns
@@ -109,6 +103,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         val id = filename.split('-')(0).toInt
         val name = filename.split('-')(1).split('.')(0)
         PatternNames = PatternNames :+ id + "-" + name
+      } catch {
+        case x: Throwable => {
+          logger.error("Image filenames are not in the correct format")
+          throw new IllegalArgumentException
+        }
       }
     })
     imageList.foreach({ filename =>
@@ -147,8 +146,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def pixelByteString(cursor: (Int, Int)): ByteString = {
+    val volume = lastPatternSelect.intensity.toFloat / 255.0
     val pixel: Int = try {
-      currentImage.image.getRGB(cursor._1, cursor._2)
+      (currentImage.image.getRGB(cursor._1, cursor._2) * volume).toInt
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
