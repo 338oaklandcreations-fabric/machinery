@@ -26,7 +26,9 @@ class PwmLight extends HostActor {
   implicit val logger = LoggerFactory.getLogger(getClass)
 
   val PwmPeriod = 10000000
-  val PwmDevices = List("/sys/devices/ocp.3/bs_pwm_test_P9_14.12", "/sys/devices/ocp.3/bs_pwm_test_P9_16.12", "/sys/devices/ocp.3/bs_pwm_test_P8_19.12")
+  val PwmDevices = List("/sys/devices/ocp.3/bs_pwm_test_P9_14.12",
+    "/sys/devices/ocp.3/bs_pwm_test_P9_16.13",
+    "/sys/devices/ocp.3/bs_pwm_test_P8_19.14")
 
   def setupPWM = {
     PwmDevices.foreach( { device =>

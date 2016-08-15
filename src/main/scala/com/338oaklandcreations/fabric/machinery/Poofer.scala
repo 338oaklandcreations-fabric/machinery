@@ -125,7 +125,7 @@ class Poofer extends HostActor {
     setGPIOpin(false, LeftPooferPin)
   }
 
-  setupGPIO(RightPooferPin)
-  setupGPIO(LeftPooferPin)
+  setupGPIO(RightPooferPin, 0)
+  setupGPIO(LeftPooferPin, 0)
 
 }

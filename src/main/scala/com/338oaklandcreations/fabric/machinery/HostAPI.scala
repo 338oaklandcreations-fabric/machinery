@@ -83,7 +83,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   override def preStart(): Unit = {
     logger.info("Starting HostAPI...")
     logger.info("Starting GPIO for ledPower control...")
-    setupGPIO(ledPowerPin)
+    setupGPIO(ledPowerPin, 1)
     logger.info("Starting PWM for wellLight control...")
     setupPWM
     wellLightSettings = WellLightSettings(false, 128)

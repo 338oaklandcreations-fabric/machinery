@@ -32,7 +32,7 @@ trait HostActor {
 
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
 
-  def setupGPIO(pin: String)(implicit logger: Logger) = {
+  def setupGPIO(pin: String, initialValue: Int)(implicit logger: Logger) = {
     if (isArm) {
       val enableCommand = "sudo sh -c \"echo " + pin + " > /sys/class/gpio/export\""
       logger.info("Enable ledPower pin...")
@@ -40,7 +40,7 @@ trait HostActor {
       val directionCommand = "sudo sh -c \"echo out > " + pinFilename(pin) + "/direction\""
       logger.info("Direction for ledPower pin...")
       Process(Seq("bash", "-c", directionCommand)).!
-      val valueCommand = "sudo sh -c \"echo 1 > "+ pinFilename(pin) + "/value\""
+      val valueCommand = "sudo sh -c \"echo " + initialValue + " > "+ pinFilename(pin) + "/value\""
       logger.info("Value for ledPower pin...")
       Process(Seq("bash", "-c", valueCommand)).!
     }
