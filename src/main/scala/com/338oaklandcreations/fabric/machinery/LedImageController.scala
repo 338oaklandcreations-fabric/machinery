@@ -44,8 +44,10 @@ object LedImageController extends HostActor {
   val ConnectionTickInterval = 5 seconds
   val TickInterval = 12 milliseconds
 
-  val LedRows = 10
-  val LedColumns = 72
+  val LedColumns = {
+    if (hostname == "apis") 100
+    else 72
+  }
   val SpeedModifier = 1
   val PixelHop = 20
 
@@ -152,7 +154,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
-    if (isArm) ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
+    if (hostname == "apis") ByteString((pixel >> 16).toByte, (pixel >> 8).toByte, (pixel).toByte)
+    else if (isArm) ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
     else ByteString((pixel >> 16).toByte, (pixel >> 8).toByte, (pixel).toByte)
   }
 
