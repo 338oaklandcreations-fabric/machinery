@@ -45,8 +45,8 @@ object LedImageController extends HostActor {
   val TickInterval = 12 milliseconds
 
   val LedColumns = {
-    if (hostname == "apis") 100
-    else 72
+    if (hostname == "apis") 101
+    else 57
   }
   val SpeedModifier = 1
   val PixelHop = 20
