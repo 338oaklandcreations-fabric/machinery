@@ -154,7 +154,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
-    if (isArm) ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
+    if (hostname == "apis") ByteString(((pixel >> 16) * volume).toByte, ((pixel >> 8) * volume).toByte, (pixel * volume).toByte)
+    else if (isArm) ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
     else ByteString(((pixel >> 16) * volume).toByte, ((pixel >> 8) * volume).toByte, (pixel * volume).toByte)
   }
 
