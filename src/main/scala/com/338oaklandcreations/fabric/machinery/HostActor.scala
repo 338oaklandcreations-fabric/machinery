@@ -27,8 +27,12 @@ import scala.sys.process.Process
 trait HostActor {
 
   val hostname = {
-    val inetAddr = InetAddress.getLocalHost
-    inetAddr.getHostName
+    try {
+      val inetAddr = InetAddress.getLocalHost
+      inetAddr.getHostName
+    } catch {
+      case _: Throwable => "unknown"
+    }
   }
 
   val isArm = {
