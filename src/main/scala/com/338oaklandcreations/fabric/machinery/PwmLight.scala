@@ -19,11 +19,15 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import java.util.Timer
+
 import org.slf4j.LoggerFactory
 
-class PwmLight extends HostActor {
+class PwmLight extends HostActor with TickManager {
 
   implicit val logger = LoggerFactory.getLogger(getClass)
+
+  val timer = new Timer
 
   val PwmPeriod = 10000000
   val PwmDevices = List("/sys/devices/ocp.3/bs_pwm_test_P9_14.12",
@@ -42,7 +46,7 @@ class PwmLight extends HostActor {
     false
   }
 
-  def tick = {
+  def step = {
 
   }
 

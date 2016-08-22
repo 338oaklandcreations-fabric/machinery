@@ -19,6 +19,8 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import java.util.Timer
+
 import org.slf4j.LoggerFactory
 
 object Poofer {
@@ -26,11 +28,13 @@ object Poofer {
 
 }
 
-class Poofer extends HostActor {
+class Poofer extends HostActor with TickManager {
 
   import Poofer._
 
   implicit val logger = LoggerFactory.getLogger(getClass)
+
+  val timer = new Timer
 
   val RightPooferPin = "67"
   val LeftPooferPin = "68"
@@ -94,7 +98,7 @@ class Poofer extends HostActor {
     runningPattern > 0 && patternStep <= patterns(runningPattern).length
   }
 
-  def tick = {
+  def step = {
     if (runningPattern > 0) {
       val tickTime = System.currentTimeMillis
       if (patternStep >= patterns(runningPattern).length) {
@@ -114,6 +118,7 @@ class Poofer extends HostActor {
       runningPattern = id
       patternStart = System.currentTimeMillis
       patternStep = 0
+      tick(() => step, 5L)
     }
   }
 

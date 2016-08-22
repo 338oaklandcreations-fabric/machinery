@@ -19,33 +19,15 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import akka.actor.{Actor, ActorLogging}
-import org.slf4j.LoggerFactory
+import java.util.TimerTask
 
-object ApisAPI {
+trait TickManager {
 
-  case object ApisTick
+  val timer: java.util.Timer
 
-  case class PooferPattern(id: Int)
-  case class BodyLightPattern(id: Int, level: Int)
+  def running: Boolean
+
+  def tick(f: () => Unit, n: Long): Any = timer.schedule(new TimerTask() { def run = {f(); if (running) tick(f, n); }}, n)
 
 }
 
-class ApisAPI extends Actor with ActorLogging {
-
-  import ApisAPI._
-
-  val logger =  LoggerFactory.getLogger(getClass)
-
-  val lights = new PwmLight
-  val poofers = new Poofer
-
-  def receive = {
-    case ApisTick =>
-    case PooferPattern(id) =>
-      poofers.setPattern(id)
-    case BodyLightPattern(id, level) =>
-      lights.setPattern(id, level)
-    case x => logger.info ("Unknown Command: " + x.toString())
-  }
-}

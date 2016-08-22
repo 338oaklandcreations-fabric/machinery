@@ -22,6 +22,7 @@ package com._338oaklandcreations.fabric.machinery
 import java.net.InetAddress
 
 import org.slf4j.Logger
+
 import scala.sys.process.Process
 
 trait HostActor {
@@ -65,6 +66,7 @@ trait HostActor {
       setPinResult
     } else if (pinValue) "1" else "0"
   }
+
   def setPWMperiod(period: Int, device: String)(implicit logger: Logger) = {
     if (isArm) {
       val periodCommand = "sudo sh -c \"echo " + period + " > " + device + "/period\""
