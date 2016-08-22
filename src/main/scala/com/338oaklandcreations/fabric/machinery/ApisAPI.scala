@@ -41,7 +41,7 @@ class ApisAPI extends Actor with ActorLogging {
 
   val logger =  LoggerFactory.getLogger(getClass)
 
-  val TickInterval = 2 milliseconds
+  val TickInterval = 1 milliseconds
   var TickScheduler: Cancellable = null
 
   val lights = new PwmLight
