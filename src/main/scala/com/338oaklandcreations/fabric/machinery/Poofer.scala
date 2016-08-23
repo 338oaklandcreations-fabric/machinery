@@ -119,7 +119,7 @@ class Poofer extends HostActor with TickManager {
       runningPattern = id
       patternStart = System.currentTimeMillis
       patternStep = 0
-      tick(() => step, 5L)
+      tick(() => step, 10L)
     }
   }
 
