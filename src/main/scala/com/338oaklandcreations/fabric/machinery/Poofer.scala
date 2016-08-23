@@ -100,7 +100,7 @@ class Poofer extends HostActor with TickManager {
 
   def step = {
     if (runningPattern > 0) {
-      logger.info("TEST1")
+      logger.info("TEST2")
       val tickTime = System.currentTimeMillis
       if (patternStep >= patterns(runningPattern).length) {
         shutdown
