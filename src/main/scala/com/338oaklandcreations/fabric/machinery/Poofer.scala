@@ -105,6 +105,7 @@ class Poofer extends HostActor with TickManager {
         shutdown
       } else if (patterns(runningPattern)(patternStep).time < tickTime - patternStart) {
         logger.info("Pattern Step: " + patternStep)
+        logger.info("TEST")
         setGPIOpin(patterns(runningPattern)(patternStep).states(0), RightPooferPin)
         setGPIOpin(patterns(runningPattern)(patternStep).states(1), LeftPooferPin)
         patternStep += 1
