@@ -100,12 +100,12 @@ class Poofer extends HostActor with TickManager {
 
   def step = {
     if (runningPattern > 0) {
+      logger.info("TEST1")
       val tickTime = System.currentTimeMillis
       if (patternStep >= patterns(runningPattern).length) {
         shutdown
       } else if (patterns(runningPattern)(patternStep).time < tickTime - patternStart) {
         logger.info("Pattern Step: " + patternStep)
-        logger.info("TEST")
         setGPIOpin(patterns(runningPattern)(patternStep).states(0), RightPooferPin)
         setGPIOpin(patterns(runningPattern)(patternStep).states(1), LeftPooferPin)
         patternStep += 1
