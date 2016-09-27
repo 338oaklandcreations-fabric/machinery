@@ -46,7 +46,7 @@ object LedImageController extends HostActor {
 
   val LedColumns = {
     if (hostname == "apis") 101
-    else 57
+    else 59
   }
   val SpeedModifier = 1
   val PixelHop = 20
@@ -55,6 +55,8 @@ object LedImageController extends HostActor {
     if (isArm) LedColumns
     else LedColumns
   }
+
+  val LedCountList = (0 to LedCount - 1).toList
 
   val NumBytes = LedCount * 3
 
@@ -77,6 +79,12 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
+  val pixelPositions: List[(Int, Int)] = {
+    if (hostname == "reeds") ReedsPlacement.positions
+    else if (hostname == "windflowers") WindflowersPlacement.positions
+    else ReedsPlacement.positions
+  }
+
   var globalCursor = (0, 0)
   var direction = 1
   var blending = 0
@@ -88,7 +96,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
 
-  def horizontalPixelSpacing = currentImage.width / (LedColumns + 1)
+  def horizontalPixelSpacing = currentImage.width / {
+    if (hostname == "reeds") ReedsPlacement.layoutWidth
+    else if (hostname == "windflowers") WindflowersPlacement.layoutWidth
+    else ReedsPlacement.layoutWidth
+  }
 
   override def preStart = {
 
@@ -150,7 +162,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def pixelByteString(cursor: (Int, Int)): ByteString = {
     val volume = lastPatternSelect.intensity.toFloat / 255.0
     val pixel: Int = try {
-      (currentImage.image.getRGB(cursor._1, cursor._2)).toInt
+      (currentImage.image.getRGB(cursor._1, cursor._2))
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
@@ -163,9 +175,13 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     offsets match {
       case Nil => data
       case x :: Nil =>
-        data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2))
+        //data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2))
+        val position = pixelPositions(x)
+        data ++ pixelByteString((position._1 * horizontalPixelSpacing, position._2 + cursor._2))
       case x :: y =>
-        data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2)) ++ assembledPixelData(data, y, cursor)
+        //data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2)) ++ assembledPixelData(data, y, cursor)
+        val position = pixelPositions(x)
+        data ++ pixelByteString((position._1 * horizontalPixelSpacing, position._2 + cursor._2)) ++ assembledPixelData(data, y, cursor)
     }
   }
 
@@ -173,8 +189,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     if (currentImage != images(select.id)._1) {
       currentImage = images(select.id)._1
       globalCursor = (0, 0)
-      lastFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
-      currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+      lastFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+      currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
     }
     lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
   }
@@ -206,9 +222,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
         globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
         lastFrame =
-          if (currentFrame == null) ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+          if (currentFrame == null) ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
           else currentFrame
-        currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, (1 to LedCount).toList, globalCursor)
+        currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
       }
       blending = blending - 1
       connection ! Write(blendedFrames)

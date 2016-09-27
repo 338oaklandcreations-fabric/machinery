@@ -98,7 +98,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       connection ! Register(self)
       connection ! Write(ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_OPC_CONNECT))).toByteArray))
       connection ! lastPatternSelect
-      context.system.scheduler.scheduleOnce (10 milliseconds, self, PatternNamesRequest)
+      context.system.scheduler.scheduleOnce (10 seconds, self, PatternNamesRequest)
       context become connected(connection)
     case LedControllerVersionRequest =>
       context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
