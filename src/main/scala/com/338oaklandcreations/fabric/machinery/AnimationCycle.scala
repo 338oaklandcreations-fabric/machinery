@@ -19,12 +19,29 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import com._338oaklandcreations.fabric.machinery.FabricProtos.FabricWrapperMessage.Msg.PatternCommand
+
 object AnimationCycle {
 
   val SleepThreshold = 15 * 60 * 1000
 
+  val Steps: List[PatternCommand] = List()
+
 }
 
 class AnimationCycle {
+
+  import AnimationCycle._
+
+  var currentStep = 0
+
+  def currentPattern: PatternCommand = {
+    Steps(currentStep)
+  }
+
+  def incrementStep = {
+    currentStep += 1
+    if (currentStep >= Steps.length) currentStep = 0
+  }
 
 }

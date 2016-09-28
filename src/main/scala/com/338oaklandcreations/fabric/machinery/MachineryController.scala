@@ -66,7 +66,7 @@ class MachineryController extends Actor with ActorLogging {
   def receive = {
     case SleepCheckTick =>
       if (System.currentTimeMillis() - lastPatternSelectTime > AnimationCycle.SleepThreshold) {
-        
+
       }
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
