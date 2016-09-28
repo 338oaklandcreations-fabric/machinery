@@ -24,11 +24,15 @@ import java.net.InetSocketAddress
 import akka.actor._
 import akka.util.Timeout
 import com._338oaklandcreations.fabric.machinery.ApisAPI.{BodyLightPattern, PooferPattern}
+import com._338oaklandcreations.fabric.machinery.MachineryController.SleepCheckTick
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
 object MachineryController {
+
+  case object SleepCheckTick
+
 }
 
 class MachineryController extends Actor with ActorLogging {
@@ -49,13 +53,21 @@ class MachineryController extends Actor with ActorLogging {
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
   val apisAPI = actorOf(Props[ApisAPI], "apisAPI")
 
+  var lastPatternSelectTime = 0L
   var imageController = false
+
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, 60 seconds, self, SleepCheckTick)
+  val animations = new AnimationCycle
 
   override def preStart = {
     ledController ! LedControllerConnect(true)
   }
 
   def receive = {
+    case SleepCheckTick =>
+      if (System.currentTimeMillis() - lastPatternSelectTime > AnimationCycle.SleepThreshold) {
+        
+      }
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
       hostAPI forward TimeSeriesRequestCPU
@@ -84,6 +96,7 @@ class MachineryController extends Actor with ActorLogging {
       ledController forward PatternNamesRequest
     case select: PatternSelect =>
       logger.debug("PatternSelect")
+      lastPatternSelectTime = System.currentTimeMillis()
       if (select.id >= LedImageController.LowerId) {
         imageController = true
         ledController ! LedControllerConnect(false)

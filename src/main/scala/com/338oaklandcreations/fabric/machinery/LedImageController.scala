@@ -44,16 +44,18 @@ object LedImageController extends HostActor {
   val ConnectionTickInterval = 5 seconds
   val TickInterval = 12 milliseconds
 
-  val LedColumns = {
-    if (hostname == "apis") 101
-    else 59
-  }
   val SpeedModifier = 1
-  val PixelHop = 20
+  val PixelHop = 5
+
+  val apisHost = hostname == "apis"
+  val reedsHost = hostname == "reeds"
+  val windflowersHost = true //hostname == "windflowers"
 
   val LedCount = {
-    if (isArm) LedColumns
-    else LedColumns
+    if (apisHost) 101
+    else if (reedsHost) ReedsPlacement.positions.length
+    else if (windflowersHost) WindflowersPlacement.positions.length
+    else ReedsPlacement.positions.length
   }
 
   val LedCountList = (0 to LedCount - 1).toList
@@ -79,9 +81,10 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
-  val pixelPositions: List[(Int, Int)] = {
-    if (hostname == "reeds") ReedsPlacement.positions
-    else if (hostname == "windflowers") WindflowersPlacement.positions
+  val pixelPositions: List[(Double, Double)] = {
+    if (apisHost) ApisPlacement.positions
+    else if (reedsHost) ReedsPlacement.positions
+    else if (windflowersHost) WindflowersPlacement.positions
     else ReedsPlacement.positions
   }
 
@@ -97,8 +100,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
 
   def horizontalPixelSpacing = currentImage.width / {
-    if (hostname == "reeds") ReedsPlacement.layoutWidth
-    else if (hostname == "windflowers") WindflowersPlacement.layoutWidth
+    if (apisHost) ApisPlacement.layoutWidth
+    else if (reedsHost) ReedsPlacement.layoutWidth
+    else if (windflowersHost) WindflowersPlacement.layoutWidth
     else ReedsPlacement.layoutWidth
   }
 
@@ -162,13 +166,13 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def pixelByteString(cursor: (Int, Int)): ByteString = {
     val volume = lastPatternSelect.intensity.toFloat / 255.0
     val pixel: Int = try {
-      (currentImage.image.getRGB(cursor._1, cursor._2))
+      (currentImage.image.getRGB(cursor._1.max(0).min(currentImage.width - 1), cursor._2.max(0).min(currentImage.height - 1)))
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
-    if (hostname == "apis") ByteString(((pixel >> 16) * volume).toByte, ((pixel >> 8) * volume).toByte, (pixel * volume).toByte)
-    else if (isArm) ByteString((pixel).toByte, (pixel >> 16).toByte, (pixel >> 8).toByte)
-    else ByteString(((pixel >> 16) * volume).toByte, ((pixel >> 8) * volume).toByte, (pixel * volume).toByte)
+    if (apisHost) ByteString(((pixel >> 16 & 0xFF) * volume).toByte, ((pixel >> 8 & 0xFF) * volume).toByte, ((pixel & 0xFF) * volume).toByte)
+    else if (isArm) ByteString(((pixel & 0xFF) * volume).toByte, ((pixel >> 16 & 0xFF) * volume).toByte, ((pixel >> 8 & 0xFF) * volume).toByte)
+    else ByteString(((pixel >> 16 & 0xFF) * volume).toByte, ((pixel >> 8 & 0xFF) * volume).toByte, ((pixel & 0xFF) * volume).toByte)
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
@@ -177,11 +181,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       case x :: Nil =>
         //data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2))
         val position = pixelPositions(x)
-        data ++ pixelByteString((position._1 * horizontalPixelSpacing, position._2 + cursor._2))
+        data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
       case x :: y =>
         //data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2)) ++ assembledPixelData(data, y, cursor)
         val position = pixelPositions(x)
-        data ++ pixelByteString((position._1 * horizontalPixelSpacing, position._2 + cursor._2)) ++ assembledPixelData(data, y, cursor)
+        data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt)) ++ assembledPixelData(data, y, cursor)
     }
   }
 

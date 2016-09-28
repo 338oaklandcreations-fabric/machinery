@@ -4,7 +4,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    the Free Software Foundation.0.0, either version 3 of the License.0, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -13,40 +13,25 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    along with this program.  If not.0, see <http://www.gnu.org/licenses/>.
 
 */
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.io.{File, PrintWriter}
-import spray.json.DefaultJsonProtocol
+object ReedsPlacement extends LedPlacement {
 
-object ReedsPlacement extends DefaultJsonProtocol {
-
-  case class Point(point: List[Double])
-  implicit val pointJson = jsonFormat1(Point)
-
-  val positions = List((90, 10), (85, 10), (80, 10), (75, 10), (70, 10), (65, 10), (60, 10), (55, 10), (50, 10), (45, 10), (40, 10),                       // 1 - 11
-                       (35, 5), (40, 5), (45, 5), (50, 5), (55, 5), (60, 5), (65, 5), (70, 5), (75, 5),                                                    // 12 - 20
-                       (135, 10), (140, 10), (145, 10), (150, 10), (155, 10), (160, 10), (165, 10), (170, 10), (175, 10), (180, 10),                       // 1 - 10
-                       (190, 5), (185, 5), (180, 5), (175, 5), (170, 5), (165, 5), (160, 5), (155, 5), (150, 5),                                           // 11 - 19
-                       (290, 10), (285, 10), (280, 10), (275, 10), (270, 10), (265, 10), (260, 10), (255, 10), (250, 10), (245, 10), (240, 10), (235, 10), // 1 - 12
-                       (235, 5), (240, 5), (245, 5), (250, 5), (255, 5), (260, 5), (265, 5), (270, 5)                                                      // 13 - 20
+  override val positions = List((90.0, 10.0), (85.0, 10.0), (80.0, 10.0), (75.0, 10.0), (70.0, 10.0), (65.0, 10.0), (60.0, 10.0), (55.0, 10.0), (50.0, 10.0), (45.0, 10.0), (40.0, 10.0),                       // 1 - 11
+                       (35.0, 5.0), (40.0, 5.0), (45.0, 5.0), (50.0, 5.0), (55.0, 5.0), (60.0, 5.0), (65.0, 5.0), (70.0, 5.0), (75.0, 5.0),                                                    // 12 - 20
+                       (135.0, 10.0), (140.0, 10.0), (145.0, 10.0), (150.0, 10.0), (155.0, 10.0), (160.0, 10.0), (165.0, 10.0), (170.0, 10.0), (175.0, 10.0), (180.0, 10.0),                       // 1 - 10
+                       (190.0, 5.0), (185.0, 5.0), (180.0, 5.0), (175.0, 5.0), (170.0, 5.0), (165.0, 5.0), (160.0, 5.0), (155.0, 5.0), (150.0, 5.0),                                           // 11 - 19
+                       (290.0, 10.0), (285.0, 10.0), (280.0, 10.0), (275.0, 10.0), (270.0, 10.0), (265.0, 10.0), (260.0, 10.0), (255.0, 10.0), (250.0, 10.0), (245.0, 10.0), (240.0, 10.0), (235.0, 10.0), // 1 - 12
+                       (235.0, 5.0), (240.0, 5.0), (245.0, 5.0), (250.0, 5.0), (255.0, 5.0), (260.0, 5.0), (265.0, 5.0), (270.0, 5.0)                                                      // 13 - 20
   )
 
   val layoutWidth = 300
 
-  val points =
-    for {led <- positions
-    } yield {
-      Point(List(BigDecimal(led._2 / 10.0).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble,
-        BigDecimal(led._1 / 10.0).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble,
-        BigDecimal(0.0).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble))
-    }
-  val writer = new PrintWriter(new File("fabricGrid.txt"))
-  writer.write(points.toList.toJson.toString)
-  writer.close()
+  writePositions("reedsPlacement.txt")
 
 }
 

@@ -19,15 +19,24 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-object WindflowersPlacement {
+object WindflowersPlacement extends LedPlacement {
 
-  val template = List((10, 10), (20, 10), (30, 10))
-
-  def offset(start: List[Tuple2[Int, Int]], offset: Int): List[Tuple2[Int, Int]] = {
-    start.map( point => (point._1 + offset, point._2 + offset))
+  def circularPositions(count: Int, offset: Double): List[(Double, Double)] = {
+    (0 to count - 1).map(x => {
+      (offset * Math.sin(2.0 * Math.PI / count * x), offset * Math.cos(2.0 * Math.PI / count * x))
+    }).toList
   }
 
-  val positions = offset(template, 40) ++ offset(template, 80)
+  val template = List((0.0,0.0)) ++ circularPositions(3, 1.0) ++ circularPositions(6, 2.0) ++ circularPositions(14, 4.0) ++ circularPositions(26, 6.0)
 
-  val layoutWidth = 300
+  def offset(start: List[(Double, Double)], offsetPoint: (Int, Int)): List[(Double, Double)] = {
+    start.map( point => (point._1 + offsetPoint._1.toDouble, point._2 + offsetPoint._2.toDouble))
+  }
+
+  override val positions = offset(template, (20, 0)) ++ offset(template, (35, 15)) ++ offset(template, (50, 0)) ++ offset(template, (65, 15)) ++ offset(template, (80, 0))
+
+  val layoutWidth = 100
+
+  writePositions("windflowersPlacement.txt")
+
 }

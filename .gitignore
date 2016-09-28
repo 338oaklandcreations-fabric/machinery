@@ -3,6 +3,8 @@
 .DS_Store
 .idea
 
+*Placement.txt
+
 # sbt specific
 .cache
 .history
