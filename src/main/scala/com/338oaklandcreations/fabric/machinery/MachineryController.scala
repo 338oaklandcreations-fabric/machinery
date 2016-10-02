@@ -53,20 +53,26 @@ class MachineryController extends Actor with ActorLogging {
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
   val apisAPI = actorOf(Props[ApisAPI], "apisAPI")
 
-  var lastPatternSelectTime = 0L
   var imageController = false
 
-  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, 60 seconds, self, SleepCheckTick)
+  val tickScheduler = context.system.scheduler.schedule (0 milliseconds, 5 seconds, self, SleepCheckTick)
   val animations = new AnimationCycle
 
   override def preStart = {
     ledController ! LedControllerConnect(true)
+    animations.lastPatternSelectTime = System.currentTimeMillis()
   }
 
   def receive = {
     case SleepCheckTick =>
-      if (System.currentTimeMillis() - lastPatternSelectTime > AnimationCycle.SleepThreshold) {
-
+      if (animations.isShutdown) {
+        self ! LedController.OffCommand
+      } else if (animations.isSleeping) {
+        if (animations.newPatternComing) {
+          val nextPattern = animations.currentPattern
+          self ! PatternSelect(nextPattern.patternNumber.get, nextPattern.red.get, nextPattern.green.get, nextPattern.blue.get,
+            nextPattern.speed.get, nextPattern.intensity.get)
+        }
       }
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
@@ -96,7 +102,7 @@ class MachineryController extends Actor with ActorLogging {
       ledController forward PatternNamesRequest
     case select: PatternSelect =>
       logger.debug("PatternSelect")
-      lastPatternSelectTime = System.currentTimeMillis()
+      animations.lastPatternSelectTime = System.currentTimeMillis()
       if (select.id >= LedImageController.LowerId) {
         imageController = true
         ledController ! LedControllerConnect(false)
