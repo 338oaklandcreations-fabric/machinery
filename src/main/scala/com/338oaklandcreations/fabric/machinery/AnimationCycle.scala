@@ -56,16 +56,15 @@ object AnimationCycle {
 
   val ShutdownTime = new DateTime(2016, 1, 1, 5, 0)
   val StartupTime = new DateTime(2016, 1, 1, 17, 0)
-  val SleepThreshold = 1 * 60 * 1000
+  val SleepThreshold = 10 * 60 * 1000
 
   // Id, Speed, Intensity, Red, Green, Blue
   val Steps: List[(Long, PatternCommand)] = List(
     // Pattern, speed, intensity, red, green, blue
-    (15 * 1000L, PatternCommand(Some(FS_ID_RAINBOW_CHASE), Some(0), Some(255), Some(0), Some(0), Some(0))),
-    (15 * 1000L, PatternCommand(Some(FS_ID_RAINBOW_CHASE), Some(150), Some(255), Some(0), Some(0), Some(0))),
-    (15 * 1000L, PatternCommand(Some(FS_ID_FLAMES_IMAGE), Some(250), Some(255), Some(0), Some(0), Some(0))),
-    (15 * 1000L, PatternCommand(Some(FS_ID_PURPLE_BUBBLES_IMAGE), Some(250), Some(255), Some(0), Some(0), Some(0))),
-    (15 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120)))
+    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
+    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
+    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(220), Some(255), Some(100), Some(0), Some(120))),
+    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(220), Some(255), Some(100), Some(0), Some(120)))
   )
 
 }
