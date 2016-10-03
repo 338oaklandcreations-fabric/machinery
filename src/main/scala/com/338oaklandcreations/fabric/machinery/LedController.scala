@@ -176,6 +176,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
         }
       }
     case LedControllerConnect(connect) =>
+      logger.info("Receiving Connect Message")
       if (!connect) {
         logger.info("Shutting off LedController")
         connection ! Write(ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_OPC_DISCONNECT))).toByteArray))

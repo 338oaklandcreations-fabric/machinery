@@ -105,8 +105,8 @@ class MachineryController extends Actor with ActorLogging {
       logger.debug("PatternSelect: " + select.id)
       animations.lastPatternSelectTime = System.currentTimeMillis()
       if (select.id >= LedImageController.LowerId) {
-        logger.debug("Starting up image controller")
         if (!imageController) {
+          logger.debug("Starting up image controller")
           imageController = true
           ledController ! LedControllerConnect(false)
           Thread.sleep(500)
@@ -115,8 +115,8 @@ class MachineryController extends Actor with ActorLogging {
         }
         ledImageController forward select
       } else {
-        logger.debug("Starting up led controller")
         if (imageController) {
+          logger.debug("Starting up led controller")
           imageController = false
           ledImageController ! LedImageControllerConnect(false)
           Thread.sleep(500)

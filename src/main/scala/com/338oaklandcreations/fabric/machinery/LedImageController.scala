@@ -238,6 +238,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     case HeartbeatRequest =>
       context.sender ! heartbeat
     case LedImageControllerConnect(connect) =>
+      logger.info("Receiving Connect Message")
       if (!connect) {
         logger.info("Shutting off Opc")
         enableConnect.connect = connect
