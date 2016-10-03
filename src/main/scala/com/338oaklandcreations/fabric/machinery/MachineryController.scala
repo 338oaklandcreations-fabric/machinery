@@ -106,19 +106,23 @@ class MachineryController extends Actor with ActorLogging {
       animations.lastPatternSelectTime = System.currentTimeMillis()
       if (select.id >= LedImageController.LowerId) {
         logger.debug("Starting up image controller")
-        imageController = true
-        ledController ! LedControllerConnect(false)
-        Thread.sleep(500)
-        ledImageController ! LedImageControllerConnect(true)
-        Thread.sleep(500)
+        if (!imageController) {
+          imageController = true
+          ledController ! LedControllerConnect(false)
+          Thread.sleep(500)
+          ledImageController ! LedImageControllerConnect(true)
+          Thread.sleep(500)
+        }
         ledImageController forward select
       } else {
         logger.debug("Starting up led controller")
-        imageController = false
-        ledImageController ! LedImageControllerConnect(false)
-        Thread.sleep(500)
-        ledController ! LedControllerConnect(true)
-        Thread.sleep(500)
+        if (imageController) {
+          imageController = false
+          ledImageController ! LedImageControllerConnect(false)
+          Thread.sleep(500)
+          ledController ! LedControllerConnect(true)
+          Thread.sleep(500)
+        }
         ledController forward select
       }
     case WellLightSettings(power, level) =>
