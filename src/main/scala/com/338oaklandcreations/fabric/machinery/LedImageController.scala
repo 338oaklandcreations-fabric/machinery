@@ -49,7 +49,7 @@ object LedImageController extends HostActor {
 
   val apisHost = hostname == "apis"
   val reedsHost = hostname == "reeds"
-  val windflowersHost = true //hostname == "windflowers"
+  val windflowersHost = hostname == "windflowers"
 
   val LedCount = {
     if (apisHost) 101
