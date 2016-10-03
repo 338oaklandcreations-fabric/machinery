@@ -77,7 +77,7 @@ class AnimationCycle {
   var currentStep = 0
   var nextTime = 0L
   var lastPatternSelectTime = 0L
-  var newPatternTime = 0L
+  var lastAnimationStartTime = 0L
 
   def isShutdown: Boolean = {
     val current = new DateTime
@@ -89,16 +89,11 @@ class AnimationCycle {
   }
 
   def isSleeping: Boolean = {
-    System.currentTimeMillis() - lastPatternSelectTime > SleepThreshold &&
-      System.currentTimeMillis() - newPatternTime > SleepThreshold
+    System.currentTimeMillis - lastPatternSelectTime > SleepThreshold
   }
 
   def newPatternComing: Boolean = {
-    val isComing = System.currentTimeMillis() - lastPatternSelectTime > currentPatternTime
-    if (isComing) {
-      newPatternTime = System.currentTimeMillis()
-    }
-    isComing
+    System.currentTimeMillis() - lastAnimationStartTime > currentPatternTime
   }
 
   def currentPatternTime: Long = {
@@ -106,7 +101,7 @@ class AnimationCycle {
   }
 
   def currentPattern: PatternCommand = {
-    if (System.currentTimeMillis() - lastPatternSelectTime > currentPatternTime) incrementStep
+    if (System.currentTimeMillis() - lastAnimationStartTime > currentPatternTime) incrementStep
     Steps(currentStep)._2
   }
 

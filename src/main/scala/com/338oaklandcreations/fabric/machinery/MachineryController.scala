@@ -48,8 +48,8 @@ class MachineryController extends Actor with ActorLogging {
 
   logger.info("Starting Controller")
 
-  val ledController = actorOf(Props(new LedController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledController")
-  val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("localhost", scala.util.Properties.envOrElse("OPC_SERVER_PORT", "7890").toInt))), "ledImageController")
+  val ledController = actorOf(Props(new LedController(new InetSocketAddress("127.0.0.1", scala.util.Properties.envOrElse("FABRIC_LED_PORT", "8801").toInt))), "ledController")
+  val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("127.0.0.1", scala.util.Properties.envOrElse("OPC_SERVER_PORT", "7890").toInt))), "ledImageController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
   val apisAPI = actorOf(Props[ApisAPI], "apisAPI")
 
@@ -68,13 +68,36 @@ class MachineryController extends Actor with ActorLogging {
       //if (animations.isShutdown) {
       //  self ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
       //} else
-      //if (animations.isSleeping) {
-      //  if (animations.newPatternComing) {
-      //    val nextPattern = animations.currentPattern
-      //    self ! PatternSelect(nextPattern.patternNumber.get, nextPattern.red.get, nextPattern.green.get, nextPattern.blue.get,
-      //      nextPattern.speed.get, nextPattern.intensity.get)
-      //  }
-      //}
+      if (animations.isSleeping) {
+        if (animations.newPatternComing) {
+          val currentPattern= animations.currentPattern
+          animations.lastAnimationStartTime = System.currentTimeMillis
+          val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
+            currentPattern.speed.get, currentPattern.intensity.get)
+          logger.debug("Animation Select: " + nextPattern.id)
+          if (nextPattern.id >= LedImageController.LowerId) {
+            if (!imageController) {
+              logger.debug("Starting up image controller")
+              imageController = true
+              ledController ! LedControllerConnect(false)
+              Thread.sleep(500)
+              ledImageController ! LedImageControllerConnect(true)
+              Thread.sleep(500)
+            }
+            ledImageController forward nextPattern
+          } else {
+            if (imageController) {
+              logger.debug("Starting up led controller")
+              imageController = false
+              ledImageController ! LedImageControllerConnect(false)
+              Thread.sleep(500)
+              ledController ! LedControllerConnect(true)
+              Thread.sleep(500)
+            }
+            ledController forward nextPattern
+          }
+        }
+      }
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
       hostAPI forward TimeSeriesRequestCPU
