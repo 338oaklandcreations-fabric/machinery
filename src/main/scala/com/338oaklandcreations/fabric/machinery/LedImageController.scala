@@ -153,6 +153,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       connection ! Register(self)
       context become connected(connection)
     case select: PatternSelect =>
+      logger.warn("Selecting pattern")
       selectImage(select)
     case HeartbeatRequest =>
       context.sender ! heartbeat

@@ -27,10 +27,18 @@ object WindflowersPlacement extends LedPlacement {
     }).toList
   }
 
-  val template = List((0.0,0.0)) ++ circularPositions(3, 1.0) ++ circularPositions(6, 2.0) ++ circularPositions(14, 4.0) ++ circularPositions(26, 6.0)
+  val template = List(
+    (0.0, 0.0), (0.0, 5.0), (0.0, 10.0), (0.0, 15.0),
+    (10.0, -10.0), (10.0, -5.0), (10.0, 0.0), (10.0, 5.0), (10.0, 10.0), (10.0, 15.0), (10.0, 20.0), (10.0, 25.0),
+    (20.0, -25.0), (20.0, -20.0), (20.0, -15.0), (20.0, -10.0), (20.0, -5.0), (20.0, 0.0), (20.0, 5.0), (20.0, 10.0), (20.0, 15.0), (20.0, 20.0), (20.0, 25.0), (20.0, 30.0), (20.0, 35.0), (20.0, 40.0), (20.0, 45.0),
+    (30.0, -25.0), (30.0, -20.0), (30.0, -15.0), (30.0, -10.0), (30.0, -5.0), (30.0, 0.0), (30.0, 5.0), (30.0, 10.0), (30.0, 15.0), (30.0, 20.0), (30.0, 25.0), (30.0, 30.0), (30.0, 35.0), (30.0, 40.0), (30.0, 45.0),
+    (40.0, -10.0), (40.0, -5.0), (40.0, 0.0), (40.0, 5.0), (40.0, 10.0), (40.0, 15.0), (40.0, 20.0), (40.0, 25.0),
+    (50.0, 0.0), (50.0, 5.0), (50.0, 10.0), (50.0, 15.0))
+
+  //val template = List((0.0,0.0)) ++ circularPositions(3, 1.0) ++ circularPositions(6, 2.0) ++ circularPositions(14, 4.0) ++ circularPositions(26, 6.0)
 
   def offset(start: List[(Double, Double)], offsetPoint: (Int, Int)): List[(Double, Double)] = {
-    start.map( point => (point._1 + offsetPoint._1.toDouble, point._2 + offsetPoint._2.toDouble))
+    start.map( point => (point._1 / 5.0 + offsetPoint._1.toDouble, point._2 / 5.0 + offsetPoint._2.toDouble))
   }
 
   override val positions = offset(template, (20, 0)) ++ offset(template, (35, 15)) ++ offset(template, (50, 0)) ++ offset(template, (65, 15)) ++ offset(template, (80, 0))
