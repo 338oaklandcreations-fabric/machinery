@@ -68,6 +68,7 @@ class MachineryController extends Actor with ActorLogging {
       //if (animations.isShutdown) {
       //  self ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
       //} else
+      /*
       if (animations.isSleeping) {
         if (animations.newPatternComing) {
           val currentPattern= animations.currentPattern
@@ -98,6 +99,7 @@ class MachineryController extends Actor with ActorLogging {
           }
         }
       }
+      */
     case TimeSeriesRequestCPU =>
       logger.debug("TimeSeriesRequestCPU")
       hostAPI forward TimeSeriesRequestCPU
