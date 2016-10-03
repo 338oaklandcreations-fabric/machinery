@@ -65,9 +65,10 @@ class MachineryController extends Actor with ActorLogging {
 
   def receive = {
     case SleepCheckTick =>
-      if (animations.isShutdown) {
-        self ! LedController.OffCommand
-      } else if (animations.isSleeping) {
+      //if (animations.isShutdown) {
+      //  self ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
+      //} else
+      if (animations.isSleeping) {
         if (animations.newPatternComing) {
           val nextPattern = animations.currentPattern
           self ! PatternSelect(nextPattern.patternNumber.get, nextPattern.red.get, nextPattern.green.get, nextPattern.blue.get,
