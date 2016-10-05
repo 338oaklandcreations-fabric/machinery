@@ -19,6 +19,8 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import java.net.InetAddress
+
 import akka.actor._
 import akka.pattern.ask
 import org.joda.time.format.ISODateTimeFormat
@@ -63,6 +65,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       hostCPU ~
       heartbeat ~
       hostStatistics ~
+      currentHostName ~
       ledPower ~
       reboot ~
       versions ~
@@ -141,6 +144,18 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
             case _ => ctx.complete(400, UnknownCommandResponseString)
           }
           case Failure(failure) => ctx.complete(400, failure.toString)
+        }
+      }
+    }
+  }
+  def currentHostName = get {
+    path("hostName") {
+      respondWithMediaType(`application/json`) { ctx =>
+        try {
+          val inetAddr = InetAddress.getLocalHost
+          ctx.complete(inetAddr.getHostName)
+        } catch {
+          case _: Throwable => ctx.complete("Unknown Host")
         }
       }
     }
