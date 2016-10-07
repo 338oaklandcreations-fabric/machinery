@@ -55,7 +55,7 @@ object LedImageController extends HostActor with HostAware {
     else WindflowersPlacement.positions.length
   }
 
-  val LedCountList = (0 to LedCount - 1).toList
+  val LedCountList = 50 //(0 to LedCount - 1).toList
   val NumBytes = LedCount * 3
   val LowerId = 1000
   var PatternNames = List.empty[String]
