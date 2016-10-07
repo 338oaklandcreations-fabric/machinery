@@ -43,10 +43,16 @@ object LedImageController extends HostActor with HostAware {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val TickInterval = 12 milliseconds
+  val TickInterval = {
+    if (windflowersHost) 25 milliseconds
+    else 12 milliseconds
+  }
 
   val SpeedModifier = 1
-  val PixelHop = 5
+  val PixelHop = {
+    if (windflowersHost) 20
+    else 5
+  }
 
   val LedCount = {
     if (apisHost) 101
