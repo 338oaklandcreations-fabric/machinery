@@ -178,6 +178,12 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
+    var result = List.empty[Byte]
+    offsets.map({ x =>
+      val position = pixelPositions(x)
+      result = result ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
+    })
+    /*
     offsets match {
       case Nil => data
       case x :: Nil =>
@@ -187,6 +193,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         val position = pixelPositions(x)
         data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt)) ++ assembledPixelData(data, y, cursor)
     }
+    */
   }
 
   def selectImage(select: PatternSelect) = {
