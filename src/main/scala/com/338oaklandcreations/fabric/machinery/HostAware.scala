@@ -26,6 +26,7 @@ trait HostAware {
   val hostname = {
     try {
       val inetAddr = InetAddress.getLocalHost
+      print(inetAddr.getHostName)
       inetAddr.getHostName
     } catch {
       case _: Throwable => "unknown"
