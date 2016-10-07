@@ -56,8 +56,8 @@ object AnimationCycle {
   val FS_ID_NARROW_FLAME = 1008
   val FS_ID_FLOWER_FLICKER = 1009
 
-  val ShutdownTime = new DateTime(2016, 1, 1, 5, 0)
-  val StartupTime = new DateTime(2016, 1, 1, 17, 0)
+  val ShutdownTime = new DateTime(2016, 1, 1, 14, 0)
+  val StartupTime = new DateTime(2016, 1, 1, 0, 0)
   val SleepThreshold = 10 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = List(
@@ -86,9 +86,9 @@ class AnimationCycle extends HostAware {
   def isShutdown: Boolean = {
     val current = new DateTime
     if (ShutdownTime.getHourOfDay > StartupTime.getHourOfDay) {
-      current.getHourOfDay > ShutdownTime.getHourOfDay && current.getHourOfDay < StartupTime.getHourOfDay && !developmentHost
+      current.getHourOfDay >= ShutdownTime.getHourOfDay && current.getHourOfDay < StartupTime.getHourOfDay && !developmentHost
     } else {
-      current.getHourOfDay > ShutdownTime.getHourOfDay && (current.getHourOfDay < StartupTime.getHourOfDay + 24) && !developmentHost
+      current.getHourOfDay >= ShutdownTime.getHourOfDay && (current.getHourOfDay < StartupTime.getHourOfDay + 24) && !developmentHost
     }
   }
 
