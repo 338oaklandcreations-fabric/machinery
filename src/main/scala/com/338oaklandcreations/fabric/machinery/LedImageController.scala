@@ -31,7 +31,8 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
-object LedImageController extends HostActor {
+object LedImageController extends HostActor with HostAware {
+
   def props(remote: InetSocketAddress) = Props(classOf[LedImageController], remote)
 
   case object FrameTick
@@ -47,23 +48,16 @@ object LedImageController extends HostActor {
   val SpeedModifier = 1
   val PixelHop = 5
 
-  val apisHost = hostname == "apis"
-  val reedsHost = hostname == "reeds"
-  val windflowersHost = hostname == "windflowers"
-
   val LedCount = {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
     else if (windflowersHost) WindflowersPlacement.positions.length
-    else ReedsPlacement.positions.length
+    else WindflowersPlacement.positions.length
   }
 
   val LedCountList = (0 to LedCount - 1).toList
-
   val NumBytes = LedCount * 3
-
   val LowerId = 1000
-
   var PatternNames = List.empty[String]
 
 }
@@ -81,12 +75,16 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
-  val pixelPositions: List[(Double, Double)] = {
-    if (apisHost) ApisPlacement.positions
-    else if (reedsHost) ReedsPlacement.positions
-    else if (windflowersHost) WindflowersPlacement.positions
-    else ReedsPlacement.positions
+  val layout: LedPlacement = {
+    if (apisHost) ApisPlacement
+    else if (reedsHost) ReedsPlacement
+    else if (windflowersHost) WindflowersPlacement
+    else WindflowersPlacement
   }
+
+  val pixelPositions: List[(Double, Double)] = layout.positions
+
+  def horizontalPixelSpacing = currentImage.width / layout.layoutWidth
 
   var globalCursor = (0, 0)
   var direction = 1
@@ -98,13 +96,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var currentImage: Image = null
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
-
-  def horizontalPixelSpacing = currentImage.width / {
-    if (apisHost) ApisPlacement.layoutWidth
-    else if (reedsHost) ReedsPlacement.layoutWidth
-    else if (windflowersHost) WindflowersPlacement.layoutWidth
-    else ReedsPlacement.layoutWidth
-  }
+  var redFactor = 1.0
+  var greenFactor = 1.0
+  var blueFactor = 1.0
 
   override def preStart = {
 
@@ -114,7 +108,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     }
 
     val imageList = List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg",
-         "1005-Gold Bubbles.png", "1006-Grape Sunset.png", "1007-Purple Bubbles.png")
+         "1005-Gold Bubbles.png", "1006-Grape Sunset.png", "1007-Purple Bubbles.png", "1008-Narrow Flames.jpg", "1009-Flower Flicker.jpg")
     imageList.foreach({ filename =>
       try {
         logger.info("Identifying image file: " + filename)
@@ -171,20 +165,25 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
-    if (apisHost) ByteString(((pixel >> 16 & 0xFF) * volume).toByte, ((pixel >> 8 & 0xFF) * volume).toByte, ((pixel & 0xFF) * volume).toByte)
-    else if (isArm) ByteString(((pixel & 0xFF) * volume).toByte, ((pixel >> 16 & 0xFF) * volume).toByte, ((pixel >> 8 & 0xFF) * volume).toByte)
-    else ByteString(((pixel >> 16 & 0xFF) * volume).toByte, ((pixel >> 8 & 0xFF) * volume).toByte, ((pixel & 0xFF) * volume).toByte)
+    val red = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0).toByte
+    val green = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0).toByte
+    val blue = ((pixel & 0xFF) * volume * blueFactor).min(255.0).toByte
+    if (apisHost) {
+      ByteString(red, green, blue)
+    } else if (isArm) {
+      ByteString(blue, red, green)
+    } else {
+      ByteString(red, green, blue)
+    }
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
     offsets match {
       case Nil => data
       case x :: Nil =>
-        //data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2))
         val position = pixelPositions(x)
         data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
       case x :: y =>
-        //data ++ pixelByteString((cursor._1 + x * horizontalPixelSpacing, cursor._2)) ++ assembledPixelData(data, y, cursor)
         val position = pixelPositions(x)
         data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt)) ++ assembledPixelData(data, y, cursor)
     }
@@ -196,8 +195,16 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       globalCursor = (0, 0)
       lastFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
       currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+      redFactor = 1.0
+      greenFactor = 1.0
+      blueFactor = 1.0
+      lastPatternSelect = PatternSelect(select.id, 128, 128, 128, select.speed, select.intensity)
+    } else {
+      redFactor = (select.red - 128.0) / 128.0 + 1.0
+      greenFactor = (select.green - 128.0) / 128.0 + 1.0
+      blueFactor = (select.blue - 128.0) / 128.0 + 1.0
+      lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
     }
-    lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
   }
 
   def heartbeat: Heartbeat = {

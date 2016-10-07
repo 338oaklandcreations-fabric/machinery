@@ -19,22 +19,11 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.net.InetAddress
-
 import org.slf4j.Logger
 
 import scala.sys.process.Process
 
 trait HostActor {
-
-  val hostname = {
-    try {
-      val inetAddr = InetAddress.getLocalHost
-      inetAddr.getHostName
-    } catch {
-      case _: Throwable => "unknown"
-    }
-  }
 
   val isArm = {
     val hosttype = Process(Seq("bash", "-c", "echo $HOSTTYPE")).!!.replaceAll("\n", "")

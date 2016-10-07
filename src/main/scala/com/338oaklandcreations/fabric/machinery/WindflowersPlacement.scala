@@ -21,6 +21,8 @@ package com._338oaklandcreations.fabric.machinery
 
 object WindflowersPlacement extends LedPlacement {
 
+  val templateFactor = 5.0
+
   def circularPositions(count: Int, offset: Double): List[(Double, Double)] = {
     (0 to count - 1).map(x => {
       (offset * Math.sin(2.0 * Math.PI / count * x), offset * Math.cos(2.0 * Math.PI / count * x))
@@ -35,15 +37,25 @@ object WindflowersPlacement extends LedPlacement {
     (40.0, -10.0), (40.0, -5.0), (40.0, 0.0), (40.0, 5.0), (40.0, 10.0), (40.0, 15.0), (40.0, 20.0), (40.0, 25.0),
     (50.0, 0.0), (50.0, 5.0), (50.0, 10.0), (50.0, 15.0))
 
-  //val template = List((0.0,0.0)) ++ circularPositions(3, 1.0) ++ circularPositions(6, 2.0) ++ circularPositions(14, 4.0) ++ circularPositions(26, 6.0)
-
   def offset(start: List[(Double, Double)], offsetPoint: (Int, Int)): List[(Double, Double)] = {
-    start.map( point => (point._1 / 5.0 + offsetPoint._1.toDouble, point._2 / 5.0 + offsetPoint._2.toDouble))
+    start.map(point => (point._1 / templateFactor + offsetPoint._1.toDouble, point._2 / templateFactor + offsetPoint._2.toDouble))
   }
 
-  override val positions = offset(template, (20, 0)) ++ offset(template, (35, 15)) ++ offset(template, (50, 0)) ++ offset(template, (65, 15)) ++ offset(template, (80, 0))
+  def tails(offset: Int, count: Int): List[(Double, Double)] = {
+    (1 to count).map({ x =>
+      (offset.toDouble, (x * 2 + 10).toDouble)
+    }).toList
+  }
 
-  val layoutWidth = 100
+  override val positions = {
+    tails(20, 4) ++ offset(template, (20, 0))  ++ tails(30, 4) ++
+      tails(35, 3) ++ offset(template, (35, 15)) ++ tails(45, 3) ++
+      tails(50, 2) ++ offset(template, (50, 0)) ++ tails(60, 2) ++
+      tails(65, 3) ++ offset(template, (65, 15)) ++ tails(75, 3) ++
+      tails(80, 2) ++ offset(template, (80, 0)) ++ tails(90, 2)
+  }
+
+  override val layoutWidth = 100
 
   writePositions("windflowersPlacement.txt")
 

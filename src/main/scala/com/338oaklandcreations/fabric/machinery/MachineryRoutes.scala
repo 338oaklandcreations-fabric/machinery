@@ -153,7 +153,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       respondWithMediaType(`application/json`) { ctx =>
         try {
           val inetAddr = InetAddress.getLocalHost
-          ctx.complete(inetAddr.getHostName)
+          ctx.complete("{\"hostName\": \"" + inetAddr.getHostName + "\"}")
         } catch {
           case _: Throwable => ctx.complete("Unknown Host")
         }

@@ -36,7 +36,7 @@ object ReedsPlacement extends LedPlacement {
     (270.0, 5.0), (270.0, 5.0)    // Returning repeaters
   )
 
-  val layoutWidth = 300
+  override val layoutWidth = 300
 
   writePositions("reedsPlacement.txt")
 

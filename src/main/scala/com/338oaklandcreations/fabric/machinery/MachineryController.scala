@@ -65,50 +65,51 @@ class MachineryController extends Actor with ActorLogging {
 
   def receive = {
     case SleepCheckTick =>
-      //if (animations.isShutdown) {
-      //  self ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
-      //} else
-      if (animations.isSleeping) {
-        if (animations.newPatternComing) {
-          val currentPattern= animations.currentPattern
-          animations.lastAnimationStartTime = System.currentTimeMillis
-          val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
-            currentPattern.speed.get, currentPattern.intensity.get)
-          logger.debug("Animation Select: " + nextPattern.id)
-          if (nextPattern.id >= LedImageController.LowerId) {
-            if (!imageController) {
-              logger.debug("Starting up image controller")
-              imageController = true
-              ledController ! LedControllerConnect(false)
-              Thread.sleep(500)
-              ledImageController ! LedImageControllerConnect(true)
-              Thread.sleep(500)
+      if (animations.isShutdown) {
+        self ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
+      } else {
+        if (animations.isSleeping) {
+          if (animations.newPatternComing) {
+            val currentPattern = animations.currentPattern
+            animations.lastAnimationStartTime = System.currentTimeMillis
+            val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
+              currentPattern.speed.get, currentPattern.intensity.get)
+            logger.info("Animation Select: " + nextPattern.id)
+            if (nextPattern.id >= LedImageController.LowerId) {
+              if (!imageController) {
+                logger.info("Starting up image controller")
+                imageController = true
+                ledController ! LedControllerConnect(false)
+                Thread.sleep(500)
+                ledImageController ! LedImageControllerConnect(true)
+                Thread.sleep(500)
+              }
+              ledImageController forward nextPattern
+            } else {
+              if (imageController) {
+                logger.info("Starting up led controller")
+                imageController = false
+                ledImageController ! LedImageControllerConnect(false)
+                Thread.sleep(500)
+                ledController ! LedControllerConnect(true)
+                Thread.sleep(500)
+              }
+              ledController forward nextPattern
             }
-            ledImageController forward nextPattern
-          } else {
-            if (imageController) {
-              logger.debug("Starting up led controller")
-              imageController = false
-              ledImageController ! LedImageControllerConnect(false)
-              Thread.sleep(500)
-              ledController ! LedControllerConnect(true)
-              Thread.sleep(500)
-            }
-            ledController forward nextPattern
           }
         }
       }
     case TimeSeriesRequestCPU =>
-      logger.debug("TimeSeriesRequestCPU")
+      logger.info("TimeSeriesRequestCPU")
       hostAPI forward TimeSeriesRequestCPU
     case TimeSeriesRequestMemory =>
-      logger.debug("TimeSeriesRequestMemory")
+      logger.info("TimeSeriesRequestMemory")
       hostAPI forward TimeSeriesRequestMemory
     case HostStatisticsRequest =>
-      logger.debug("HostStatisticsRequest")
+      logger.info("HostStatisticsRequest")
       hostAPI forward HostStatisticsRequest
     case HeartbeatRequest =>
-      logger.debug("HeartbeatRequest")
+      logger.info("HeartbeatRequest")
       Thread.sleep(1000)
       if (imageController) {
         ledImageController forward HeartbeatRequest
@@ -116,20 +117,20 @@ class MachineryController extends Actor with ActorLogging {
         ledController forward HeartbeatRequest
       }
     case LedPower(on) =>
-      logger.debug("LedPower")
+      logger.info("LedPower")
       hostAPI forward LedPower(on)
     case LedControllerVersionRequest =>
-      logger.debug("LedControllerVersionRequest")
+      logger.info("LedControllerVersionRequest")
       ledController forward LedControllerVersionRequest
     case PatternNamesRequest =>
-      logger.debug("PatternNamesRequest")
+      logger.info("PatternNamesRequest")
       ledController forward PatternNamesRequest
     case select: PatternSelect =>
-      logger.debug("PatternSelect: " + select.id)
+      logger.info("PatternSelect: " + select.id)
       animations.lastPatternSelectTime = System.currentTimeMillis()
       if (select.id >= LedImageController.LowerId) {
         if (!imageController) {
-          logger.debug("Starting up image controller")
+          logger.info("Starting up image controller")
           imageController = true
           ledController ! LedControllerConnect(false)
           Thread.sleep(500)
@@ -139,7 +140,7 @@ class MachineryController extends Actor with ActorLogging {
         ledImageController forward select
       } else {
         if (imageController) {
-          logger.debug("Starting up led controller")
+          logger.info("Starting up led controller")
           imageController = false
           ledImageController ! LedImageControllerConnect(false)
           Thread.sleep(500)
@@ -149,16 +150,16 @@ class MachineryController extends Actor with ActorLogging {
         ledController forward select
       }
     case WellLightSettings(power, level) =>
-      logger.debug("WellLightSettings")
+      logger.info("WellLightSettings")
       hostAPI forward WellLightSettings(power, level)
     case WellLightSettingsRequest =>
-      logger.debug("WellLightSettingsRequest")
+      logger.info("WellLightSettingsRequest")
       hostAPI forward WellLightSettingsRequest
     case BodyLightPattern(id, level) =>
-      logger.debug("BodyLightsPattern")
+      logger.info("BodyLightsPattern")
       apisAPI forward BodyLightPattern(id, level)
     case PooferPattern(id) =>
-      logger.debug("PooferPattern")
+      logger.info("PooferPattern")
       apisAPI forward PooferPattern(id)
     case NodeConnectionClosed =>
     case unknown => logger.debug("Received Unknown message: " + unknown.toString)

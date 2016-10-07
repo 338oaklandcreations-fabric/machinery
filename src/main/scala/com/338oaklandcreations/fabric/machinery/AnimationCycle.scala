@@ -53,28 +53,28 @@ object AnimationCycle {
   val FS_ID_GOLD_BUBBLES_IMAGE = 1005
   val FS_ID_GRAPE_SUNSET_IMAGE = 1006
   val FS_ID_PURPLE_BUBBLES_IMAGE = 1007
+  val FS_ID_NARROW_FLAME = 1008
+  val FS_ID_FLOWER_FLICKER = 1009
 
   val ShutdownTime = new DateTime(2016, 1, 1, 5, 0)
   val StartupTime = new DateTime(2016, 1, 1, 17, 0)
   val SleepThreshold = 10 * 60 * 1000
 
-  // Id, Speed, Intensity, Red, Green, Blue
   val Steps: List[(Long, PatternCommand)] = List(
     // Pattern, speed, intensity, red, green, blue
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(244), Some(255), Some(100), Some(0), Some(120))),
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(220), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(249), Some(255), Some(100), Some(0), Some(120))),
+    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
+    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(229), Some(255), Some(100), Some(0), Some(120))),
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLAMES_IMAGE), Some(242), Some(255), Some(100), Some(0), Some(120))),
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
     (15 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
   )
-
 }
 
-class AnimationCycle {
+class AnimationCycle extends HostAware {
 
   import AnimationCycle._
 
@@ -86,9 +86,9 @@ class AnimationCycle {
   def isShutdown: Boolean = {
     val current = new DateTime
     if (ShutdownTime.getHourOfDay > StartupTime.getHourOfDay) {
-      current.getHourOfDay > ShutdownTime.getHourOfDay && current.getHourOfDay < StartupTime.getHourOfDay
+      current.getHourOfDay > ShutdownTime.getHourOfDay && current.getHourOfDay < StartupTime.getHourOfDay && !developmentHost
     } else {
-      current.getHourOfDay > ShutdownTime.getHourOfDay && current.getHourOfDay < StartupTime.getHourOfDay + 24
+      current.getHourOfDay > ShutdownTime.getHourOfDay && (current.getHourOfDay < StartupTime.getHourOfDay + 24) && !developmentHost
     }
   }
 

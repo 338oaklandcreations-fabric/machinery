@@ -29,7 +29,7 @@ object ApisPlacement extends LedPlacement {
     (235.0, 5.0), (240.0, 5.0), (245.0, 5.0), (250.0, 5.0), (255.0, 5.0), (260.0, 5.0), (265.0, 5.0), (270.0, 5.0)                                                      // 13 - 20
   )
 
-  val layoutWidth = 300
+  override val layoutWidth = 300
 
   writePositions("apisPlacement.txt")
 

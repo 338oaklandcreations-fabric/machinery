@@ -30,6 +30,8 @@ trait LedPlacement extends DefaultJsonProtocol {
 
   val positions: List[(Double, Double)] = null
 
+  val layoutWidth: Int = 0
+
   def writePositions(fn: String) = {
     val points =
       for {led <- positions
@@ -37,8 +39,6 @@ trait LedPlacement extends DefaultJsonProtocol {
         Point(List(BigDecimal(led._2.toDouble / 10.0).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble,
           BigDecimal(led._1.toDouble / 10.0).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble,
           BigDecimal(0.0).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble))
-        //Point(List((currentLed._2 / 10.0).toDouble, (currentLed._1 / 10.0).toDouble, 0.0.toDouble))
-        //Point(List(10.0, 10.0, 0.0))
       }
     val writer = new PrintWriter(new File(fn))
     writer.write(points.toList.toJson.toString)
