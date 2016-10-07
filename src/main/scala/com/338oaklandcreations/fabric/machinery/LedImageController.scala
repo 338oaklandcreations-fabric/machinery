@@ -44,7 +44,7 @@ object LedImageController extends HostActor with HostAware {
 
   val ConnectionTickInterval = 5 seconds
   val TickInterval = {
-    100 milliseconds
+    50 milliseconds
     //if (windflowersHost) 1000 milliseconds
     //else 12 milliseconds
   }
@@ -78,6 +78,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   import context._
 
   val logger =  LoggerFactory.getLogger(getClass)
+  logger.info(hostname)
 
   val enableConnect = LedImageControllerConnect(false)
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
