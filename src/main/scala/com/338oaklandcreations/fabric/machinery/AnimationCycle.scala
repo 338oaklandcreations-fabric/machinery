@@ -69,12 +69,29 @@ object AnimationCycle extends HostAware {
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(229), Some(255), Some(100), Some(0), Some(120))),
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLAMES_IMAGE), Some(242), Some(255), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(242), Some(255), Some(100), Some(0), Some(120))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
       )
     } else if (windflowersHost) {
+      List(
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))),  // Blue Purple
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
+        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
+      )
       List.empty[(Long, PatternCommand)]
     } else List.empty[(Long, PatternCommand)]
   }
