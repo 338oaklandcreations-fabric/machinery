@@ -58,7 +58,7 @@ object AnimationCycle extends HostAware {
 
   val ShutdownTime = new DateTime(2016, 1, 1, 14, 0)
   val StartupTime = new DateTime(2016, 1, 1, 0, 0)
-  val SleepThreshold = 10 * 60 * 1000
+  val SleepThreshold = 1 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = {
     if (reedsHost) {
@@ -74,15 +74,14 @@ object AnimationCycle extends HostAware {
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
       )
-      
     } else if (windflowersHost) {
       List(
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
+        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
