@@ -52,6 +52,7 @@ val deployTask = TaskKey[Unit]("deploy", "Copies assembly jar to remote location
 deployTask <<= assembly map { (asm) =>
   val targetDir = envOrElse("FABRIC_JAR_TARGET_DIR", "")
   val account = envOrElse("FABRIC_EMBEDDED_SERVER", "")
+  val sshPort = envOrElse("FABRIC_EMBEDDED_SERVER_SSH_PORT", "")
   val jarName = asm.getName
   val src = "./target/scala-2.11/" + jarName
   val target = targetDir + jarName
@@ -62,6 +63,6 @@ deployTask <<= assembly map { (asm) =>
   val symlink = targetDir + "Machinery-assembly.jar"
   println("Symlinking it to  " + symlink)
   val cmd = "ln -sf " + target + " " + symlink
-  Process(Seq("ssh", "-o", "ConnectTimeout=3", account, cmd)).!
+  Process(Seq("ssh", "-o", "ConnectTimeout=3", "-p", sshPort, account, cmd)).!
 }
 
