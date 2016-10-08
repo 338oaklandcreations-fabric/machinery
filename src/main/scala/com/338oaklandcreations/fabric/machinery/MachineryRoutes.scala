@@ -44,7 +44,7 @@ class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
 
 }
 
-trait MachineryRoutes extends HttpService with UserAuthentication {
+trait MachineryRoutes extends HttpService with UserAuthentication with HostAware {
 
   import HostAPI._
   import ApisAPI._
@@ -151,12 +151,7 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   def currentHostName = get {
     path("hostName") {
       respondWithMediaType(`application/json`) { ctx =>
-        try {
-          val inetAddr = InetAddress.getLocalHost
-          ctx.complete("{\"hostName\": \"" + inetAddr.getHostName + "\"}")
-        } catch {
-          case _: Throwable => ctx.complete("Unknown Host")
-        }
+        ctx.complete("{\"hostName\": \"" + hostname + "\"}")
       }
     }
   }
