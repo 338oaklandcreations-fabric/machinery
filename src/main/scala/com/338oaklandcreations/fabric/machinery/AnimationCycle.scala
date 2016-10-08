@@ -92,7 +92,6 @@ object AnimationCycle extends HostAware {
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
       )
-      List.empty[(Long, PatternCommand)]
     } else List.empty[(Long, PatternCommand)]
   }
 }
