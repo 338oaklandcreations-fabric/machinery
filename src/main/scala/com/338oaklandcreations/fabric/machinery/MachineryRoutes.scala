@@ -19,13 +19,10 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.net.InetAddress
-
 import akka.actor._
 import akka.pattern.ask
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
 import spray.http.HttpCookie
 import spray.http.MediaTypes._
 import spray.routing._
@@ -46,14 +43,13 @@ class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
 
 trait MachineryRoutes extends HttpService with UserAuthentication with HostAware {
 
-  import HostAPI._
   import ApisAPI._
+  import HostAPI._
   import LedController._
   import MachineryJsonProtocol._
   import UserAuthentication._
   import spray.json._
 
-  val logger = LoggerFactory.getLogger(getClass)
   val system = ActorSystem("fabricSystem")
 
   import system.dispatcher
