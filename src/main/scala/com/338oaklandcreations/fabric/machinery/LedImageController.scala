@@ -189,8 +189,17 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
     var newData = data
     offsets.map({ x =>
-      val position = pixelPositions(x)
-      newData = newData ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
+      if (windflowersHost) {
+        if (x % 2 == 0) {
+          val position = pixelPositions(x)
+          val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
+          newData = newData ++ pixelData ++ pixelData
+        }
+      } else {
+        val position = pixelPositions(x)
+        val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
+        newData = newData ++ pixelData
+      }
     })
     newData
     /*
