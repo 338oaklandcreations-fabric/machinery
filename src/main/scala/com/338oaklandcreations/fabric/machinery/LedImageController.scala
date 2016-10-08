@@ -57,7 +57,7 @@ object LedImageController extends HostActor with HostAware {
   val LedCount = {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
-    else if (windflowersHost) WindflowersPlacement.positions.length
+    else if (windflowersHost) 50 //WindflowersPlacement.positions.length
     else WindflowersPlacement.positions.length
   }
 
@@ -190,11 +190,12 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     var newData = data
     offsets.map({ x =>
       if (windflowersHost) {
-        if (x % 4 == 0) {
+        //if (x % 4 == 0) {
           val position = pixelPositions(x)
           val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
-          newData = newData ++ pixelData ++ pixelData ++ pixelData ++ pixelData
-        }
+          //newData = newData ++ pixelData ++ pixelData ++ pixelData ++ pixelData
+        newData = newData ++ pixelData
+        //}
       } else {
         val position = pixelPositions(x)
         val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
