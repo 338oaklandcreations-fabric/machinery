@@ -57,7 +57,7 @@ object LedImageController extends HostActor with HostAware {
   val LedCount = {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
-    else if (windflowersHost) 50 //WindflowersPlacement.positions.length
+    else if (windflowersHost) 100 //WindflowersPlacement.positions.length
     else WindflowersPlacement.positions.length
   }
 

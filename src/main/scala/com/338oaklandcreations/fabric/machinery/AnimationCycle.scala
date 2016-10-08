@@ -22,7 +22,7 @@ package com._338oaklandcreations.fabric.machinery
 import com._338oaklandcreations.fabric.machinery.FabricProtos.PatternCommand
 import org.joda.time.DateTime
 
-object AnimationCycle {
+object AnimationCycle extends HostAware {
 
   val FS_ID_FULL_COLOR = 0x03
   val FS_ID_SPARKLE = 0x04
@@ -60,18 +60,24 @@ object AnimationCycle {
   val StartupTime = new DateTime(2016, 1, 1, 0, 0)
   val SleepThreshold = 10 * 60 * 1000
 
-  val Steps: List[(Long, PatternCommand)] = List(
-    // Pattern, speed, intensity, red, green, blue
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(244), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(229), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLAMES_IMAGE), Some(242), Some(255), Some(100), Some(0), Some(120))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
-    (15 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
-  )
+  val Steps: List[(Long, PatternCommand)] = {
+    if (reedsHost) {
+      List(
+        // Pattern, speed, intensity, red, green, blue
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(244), Some(255), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(229), Some(255), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLAMES_IMAGE), Some(242), Some(255), Some(100), Some(0), Some(120))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
+        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
+      )
+    } else if (windflowersHost) {
+      List.empty[(Long, PatternCommand)]
+    } else List.empty[(Long, PatternCommand)]
+  }
 }
 
 class AnimationCycle extends HostAware {
