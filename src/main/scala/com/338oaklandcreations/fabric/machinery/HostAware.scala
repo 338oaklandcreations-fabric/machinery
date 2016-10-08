@@ -19,25 +19,18 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.net.InetAddress
-
 import org.slf4j.LoggerFactory
+
+import scala.util.Properties._
 
 trait HostAware {
 
   val logger = LoggerFactory.getLogger(getClass)
 
   val hostname = {
-    try {
-      val inetAddr = InetAddress.getLocalHost
-      logger.info("Hostname: " + inetAddr.getHostName)
-      inetAddr.getHostName
-    } catch {
-      case _: Throwable => {
-        logger.info("Hostname: unknown")
-        "unknown"
-      }
-    }
+    val name = envOrElse("HOSTNAME", "unknown")
+    logger.info("Hostname: " + name)
+    name
   }
 
   val apisHost = hostname == "apis"
