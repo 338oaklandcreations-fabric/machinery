@@ -44,7 +44,7 @@ object LedImageController extends HostActor with HostAware {
 
   val ConnectionTickInterval = 5 seconds
   val TickInterval = {
-    if (windflowersHost) 24 milliseconds
+    if (windflowersHost) 100 milliseconds
     else 12 milliseconds
   }
 
@@ -188,14 +188,16 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
     var newData = data
+    var count = 0
     offsets.map({ x =>
       if (windflowersHost) {
-        //if (x % 4 == 0) {
+        if (x % 2 == 0) {
           val position = pixelPositions(x)
           val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
-          //newData = newData ++ pixelData ++ pixelData ++ pixelData ++ pixelData
-        newData = newData ++ pixelData
-        //}
+          newData = newData ++ pixelData ++ pixelData
+          count = count + 2
+          //newData = newData ++ pixelData
+        }
       } else {
         val position = pixelPositions(x)
         val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))

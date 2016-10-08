@@ -42,7 +42,7 @@ trait HostAware {
 
   val apisHost = hostname == "apis"
   val reedsHost = hostname == "reeds"
-  val windflowersHost = hostname == "windflowers"
-  val developmentHost = hostname == "monkeyPro.local"
+  val windflowersHost = true //hostname == "windflowers"
+  val developmentHost = false //hostname == "monkeyPro.local"
 
 }
