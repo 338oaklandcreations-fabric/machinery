@@ -44,7 +44,7 @@ object LedImageController extends HostActor with HostAware {
 
   val ConnectionTickInterval = 5 seconds
   val TickInterval = {
-    if (windflowersHost) 24 milliseconds
+    if (windflowersHost) 50 milliseconds
     else 12 milliseconds
   }
 
@@ -177,8 +177,10 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     val blue = ((pixel & 0xFF) * volume * blueFactor).min(255.0).toByte
     if (apisHost) {
       ByteString(red, green, blue)
-    } else if (isArm) {
+    } else if (reedsHost) {
       ByteString(blue, red, green)
+    } else if (windflowersHost) {
+      ByteString(red, green, blue)
     } else {
       ByteString(red, green, blue)
     }
