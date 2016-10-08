@@ -21,14 +21,22 @@ package com._338oaklandcreations.fabric.machinery
 
 import java.net.InetAddress
 
+import org.slf4j.LoggerFactory
+
 trait HostAware {
+
+  val logger = LoggerFactory.getLogger(getClass)
 
   val hostname = {
     try {
       val inetAddr = InetAddress.getLocalHost
+      logger.info("Hostname: " + inetAddr.getHostName)
       inetAddr.getHostName
     } catch {
-      case _: Throwable => "unknown"
+      case _: Throwable => {
+        logger.info("Hostname: unknown")
+        "unknown"
+      }
     }
   }
 
