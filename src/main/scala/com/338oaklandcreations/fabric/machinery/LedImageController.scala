@@ -44,13 +44,13 @@ object LedImageController extends HostActor with HostAware {
 
   val ConnectionTickInterval = 5 seconds
   val TickInterval = {
-    if (windflowersHost) 100 milliseconds
+    if (windflowersHost) 12 milliseconds
     else 12 milliseconds
   }
 
   val SpeedModifier = 1
   val PixelHop = {
-    if (windflowersHost) 10
+    if (windflowersHost) 5
     else 5
   }
 
