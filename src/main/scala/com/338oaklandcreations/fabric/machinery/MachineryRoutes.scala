@@ -202,14 +202,19 @@ trait MachineryRoutes extends HttpService with UserAuthentication with HostAware
   def patternNames = get {
     path("pattern" / "names") {
       respondWithMediaType(`application/json`) { ctx =>
-        if (staticPatternNames != "") ctx.complete(staticPatternNames)
-        else {
+        if (staticPatternNames != "") {
+          ctx.complete(staticPatternNames)
+        } else {
           val future = controller ? PatternNamesRequest
           future onComplete {
             case Success(success) => success match {
               case patternNamesResult: PatternNames => {
-                staticPatternNames = patternNamesResult.toJson.toString
-                ctx.complete(staticPatternNames)
+                if (patternNamesResult.names.isEmpty) {
+                  ctx.complete(patternNamesResult.toJson.toString)
+                } else {
+                  staticPatternNames = patternNamesResult.toJson.toString
+                  ctx.complete(staticPatternNames)
+                }
               }
               case _ => ctx.complete(400, UnknownCommandResponseString)
             }

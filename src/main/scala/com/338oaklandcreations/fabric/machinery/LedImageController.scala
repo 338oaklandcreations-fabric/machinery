@@ -43,6 +43,7 @@ object LedImageController extends HostActor with HostAware {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
+  val FrameCountInterval = 100
   val TickInterval = {
     if (windflowersHost) 100 milliseconds
     else 12 milliseconds
@@ -91,7 +92,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
   val pixelPositions: List[(Double, Double)] = layout.positions
 
-  def horizontalPixelSpacing = currentImage.width / layout.layoutWidth
+  var horizontalPixelSpacing = 100
 
   var globalCursor = (0, 0)
   var direction = 1
@@ -101,6 +102,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var currentFrame: ByteString = null
   var images = Map.empty[Int, (Image, String)]
   var currentImage: Image = null
+  var frameCount = 0L
+  var frameBuildTimeMicroSeconds = 0.0
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
   var redFactor = 1.0
@@ -142,7 +145,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         }
       }
     })
-    currentImage = images(LowerId)._1
   }
 
   def receive = {
@@ -168,7 +170,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def pixelByteString(cursor: (Int, Int)): ByteString = {
     val volume = lastPatternSelect.intensity.toFloat / 255.0
     val pixel: Int = try {
-      (currentImage.image.getRGB(cursor._1.max(0).min(currentImage.width - 1), cursor._2.max(0).min(currentImage.height - 1)))
+      if (currentImage == null) 0
+      else (currentImage.image.getRGB(cursor._1.max(0).min(currentImage.width - 1), cursor._2.max(0).min(currentImage.height - 1)))
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
@@ -189,6 +192,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
     var newData = data
     var count = 0
+    val startus = System.nanoTime()
     offsets.map({ x =>
       if (windflowersHost) {
         if (x % 2 == 0) {
@@ -204,6 +208,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         newData = newData ++ pixelData
       }
     })
+    frameBuildTimeMicroSeconds = (System.nanoTime() - startus).toDouble / 1000.0
     newData
     /*
     offsets match {
@@ -219,8 +224,10 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def selectImage(select: PatternSelect) = {
+    frameCount = 0
     if (currentImage != images(select.id)._1) {
       currentImage = images(select.id)._1
+      horizontalPixelSpacing = currentImage.width / layout.layoutWidth
       globalCursor = (0, 0)
       lastFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
       currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
@@ -256,10 +263,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
+      frameCount += 1
       if (blending <= 0) {
         blending = (512 - lastPatternSelect.speed * 2) / SpeedModifier
         baseBlending = blending
-        if (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1)) direction = -1
+        if (currentImage == null || (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1))) direction = -1
         else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
         globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
         lastFrame =
@@ -269,6 +277,10 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       }
       blending = blending - 1
       connection ! Write(blendedFrames)
+      if (frameCount % FrameCountInterval == 0) {
+        logger.info(FrameCountInterval + " Frames at " + TickInterval + " / frame")
+        logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " us / frame")
+      }
     case select: PatternSelect =>
       selectImage(select)
     case HeartbeatRequest =>
