@@ -57,12 +57,15 @@ deployTask <<= assembly map { (asm) =>
   val src = "./target/scala-2.11/" + jarName
   val target = targetDir + jarName
   val target_abs = account + ":" + target
+  if (sshPort == "") Process(Seq("scp", "-o", "ConnectTimeout=3", src, target_abs)).!
+  else Process(Seq("scp", "-o", "ConnectTimeout=3", "-P", sshPort, src, target_abs)).!
   Process(Seq("scp", "-o", "ConnectTimeout=3", "-P", sshPort, src, target_abs)).!
   Process(Seq("bash", "-c", "echo " + nextMinorVersion + " > minorVersion.txt")).!
   // Optional. Create symbolic link to last version
   val symlink = targetDir + "Machinery-assembly.jar"
   println("Symlinking it to  " + symlink)
   val cmd = "ln -sf " + target + " " + symlink
-  Process(Seq("ssh", "-o", "ConnectTimeout=3", "-p", sshPort, account, cmd)).!
+  if (sshPort == "") Process(Seq("ssh", "-o", "ConnectTimeout=3", account, cmd)).!
+  else Process(Seq("ssh", "-o", "ConnectTimeout=3", "-p", sshPort, account, cmd)).!
 }
 
