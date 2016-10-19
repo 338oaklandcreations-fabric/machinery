@@ -251,7 +251,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
   def blendedFrames: ByteString = {
     ByteString(
-      for (i <- 0 to lastFrame.length - 1) yield {
+      (for (i <- 0 to lastFrame.length - 1) yield {
         val l = lastFrame(i)
         val c = currentFrame(i)
         if (l == c) l
@@ -261,7 +261,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
           val blendedByte = (lB + (cB - lB) * (1.0 - blending.toDouble / baseBlending.toDouble)).toByte
           blendedByte
         }
-      }
+      }).toArray
     )
   }
 
