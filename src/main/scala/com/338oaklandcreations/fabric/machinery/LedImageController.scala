@@ -250,15 +250,16 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def blendedFrames: ByteString = {
-    ByteString(lastFrame.zip(currentFrame).map({ case (l, c) => {
-      if (l == c) l
-      else {
-        val lB = if (l < 0) l + 255 else l
-        val cB = if (c < 0) c + 255 else c
-        val blendedByte = (lB + (cB - lB) * (1.0 - blending.toDouble / baseBlending.toDouble)).toByte
-        blendedByte
-      }
-    } }).toArray)
+    lastFrame
+//    ByteString(lastFrame.zip(currentFrame).map({ case (l, c) => {
+//      if (l == c) l
+//      else {
+//        val lB = if (l < 0) l + 255 else l
+//        val cB = if (c < 0) c + 255 else c
+//        val blendedByte = (lB + (cB - lB) * (1.0 - blending.toDouble / baseBlending.toDouble)).toByte
+//        blendedByte
+//      }
+//    } }).toArray)
   }
 
   def connected(connection: ActorRef): Receive = {
