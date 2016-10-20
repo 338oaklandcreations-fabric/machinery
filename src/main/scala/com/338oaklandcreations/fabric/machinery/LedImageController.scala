@@ -163,9 +163,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       context.sender ! heartbeat
     case LedImageControllerConnect(connect) =>
       enableConnect.connect = connect
-      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote, options = List(SO.TcpNoDelay(true)))
     case ConnectionTick =>
-      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote, options = List(SO.TcpNoDelay(true)))
   }
 
   def pixelByteString(cursor: (Int, Int), blendingFactor: Double, pixelIndex: Int): ByteString = {
