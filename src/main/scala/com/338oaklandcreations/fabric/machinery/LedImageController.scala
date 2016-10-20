@@ -104,6 +104,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var currentImage: Image = null
   var frameCount = 0L
   var frameBuildTimeMicroSeconds = 0.0
+  var volume = 1.0;
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
   var redFactor = 1.0
@@ -167,60 +168,64 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
-  def pixelByteString(cursor: (Int, Int)): ByteString = {
-    val volume = lastPatternSelect.intensity.toFloat / 255.0
+  def pixelByteString(cursor: (Int, Int), blendingFactor: Double, pixelIndex: Int): ByteString = {
     val pixel: Int = try {
       if (currentImage == null) 0
       else (currentImage.image.getRGB(cursor._1.max(0).min(currentImage.width - 1), cursor._2.max(0).min(currentImage.height - 1)))
     } catch {
       case _: Throwable => throw new IllegalArgumentException
     }
-    val red = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0).toByte
-    val green = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0).toByte
-    val blue = ((pixel & 0xFF) * volume * blueFactor).min(255.0).toByte
+
+    val lastRedByte = if (lastFrame == null) 0 else lastFrame(pixelIndex * 3 + 4)
+    val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
+    val newRed = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0)
+    val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
+
+    val lastGreenByte = if (lastFrame == null) 0 else lastFrame(pixelIndex * 3 + 5)
+    val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
+    val newGreen = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0)
+    val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
+
+    val lastBlueByte = if (lastFrame == null) 0 else lastFrame(pixelIndex * 3 + 6)
+    val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
+    val newBlue = ((pixel & 0xFF) * volume * blueFactor).min(255.0)
+    val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
+
     if (apisHost) {
-      ByteString(red, green, blue)
+      ByteString(blendedRed, blendedGreen, blendedBlue)
     } else if (reedsHost) {
-      ByteString(blue, red, green)
+      ByteString(blendedBlue, blendedRed, blendedGreen)
     } else if (windflowersHost) {
-      ByteString(red, green, blue)
+      ByteString(blendedRed, blendedGreen, blendedBlue)
     } else {
-      ByteString(red, green, blue)
+      ByteString(blendedRed, blendedGreen, blendedBlue)
     }
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
     var newData = data
     var count = 0
+    var pixelIndex = 0
     val startus = System.nanoTime()
+    val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
     offsets.map({ x =>
       if (windflowersHost) {
         if (x % 2 == 0) {
           val position = pixelPositions(x)
-          val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
+          val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, pixelIndex)
           newData = newData ++ pixelData ++ pixelData
           count = count + 2
           //newData = newData ++ pixelData
         }
       } else {
         val position = pixelPositions(x)
-        val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
+        val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, pixelIndex)
         newData = newData ++ pixelData
       }
+      pixelIndex += 1
     })
     frameBuildTimeMicroSeconds = (System.nanoTime() - startus).toDouble / 1000.0
     newData
-    /*
-    offsets match {
-      case Nil => data
-      case x :: Nil =>
-        val position = pixelPositions(x)
-        data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt))
-      case x :: y =>
-        val position = pixelPositions(x)
-        data ++ pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt)) ++ assembledPixelData(data, y, cursor)
-    }
-    */
   }
 
   def selectImage(select: PatternSelect) = {
@@ -235,6 +240,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       greenFactor = 1.0
       blueFactor = 1.0
       lastPatternSelect = PatternSelect(select.id, 128, 128, 128, select.speed, select.intensity)
+      volume = lastPatternSelect.intensity.toFloat / 255.0
     } else {
       redFactor = (select.red - 128.0) / 128.0 + 1.0
       greenFactor = (select.green - 128.0) / 128.0 + 1.0
@@ -249,22 +255,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       lastPatternSelect.speed, lastPatternSelect.intensity, 0, name)
   }
 
-  def blendedFrames: ByteString = {
-    ByteString(
-      (for (i <- 0 to lastFrame.length - 1) yield {
-        val l = lastFrame(i)
-        val c = currentFrame(i)
-        if (l == c) l
-        else {
-          val lB = if (l < 0) l + 255 else l
-          val cB = if (c < 0) c + 255 else c
-          val blendedByte = (lB + (cB - lB) * (1.0 - blending.toDouble / baseBlending.toDouble)).toByte
-          blendedByte
-        }
-      }).toArray
-    )
-  }
-
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
       frameCount += 1
@@ -277,10 +267,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         lastFrame =
           if (currentFrame == null) ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
           else currentFrame
-        currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+        //currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
       }
-      blending = blending - 1
-      connection ! Write(blendedFrames)
+      currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+      blending -= 1
+      connection ! Write(currentFrame)
       if (frameCount % FrameCountInterval == 0) {
         logger.info(FrameCountInterval + " Frames at " + TickInterval + " / frame")
         logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " us / frame")
