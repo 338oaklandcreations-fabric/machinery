@@ -46,14 +46,12 @@ object LedImageController extends HostActor with HostAware {
   val ConnectionTickInterval = 5 seconds
   val FrameCountInterval = 100
   val TickInterval = {
-    if (windflowersHost) 100 milliseconds
-    else 12 milliseconds
+    16 milliseconds
   }
 
   val SpeedModifier = 1
   val PixelHop = {
-    if (windflowersHost) 10
-    else 5
+    5
   }
 
   val LedCount = {
@@ -208,30 +206,21 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     }
   }
 
-  def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
-    var newData = Array.fill[Byte](offsets.length * 3)(0)
+  def assembledPixelData(offsets: List[Int], cursor: (Int, Int)): ByteString = {
+    var newData = Array.fill[Byte](offsets.length * 3 + 4)(0)
+    newData(2) = (NumBytes >> 8).toByte
+    newData(3) = NumBytes.toByte
     var count = 0
     val startus = System.nanoTime()
     val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
     offsets.foreach({ x =>
-      if (windflowersHost) {
-        if (x % 2 == 0) {
-          val position = pixelPositions(x)
-          val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
-          newData = newData ++ pixelData ++ pixelData
-          count = count + 2
-          //newData = newData ++ pixelData
-        }
-      } else {
-        val position = pixelPositions(x)
-        val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
-        newData(x * 3) = pixelData(0)
-        newData(x * 3 + 1) = pixelData(1)
-        newData(x * 3 + 2) = pixelData(2)
-        //newData = newData ++ pixelData
-      }
+      val position = pixelPositions(x)
+      val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
+      newData(x * 3) = pixelData(0)
+      newData(x * 3 + 1) = pixelData(1)
+      newData(x * 3 + 2) = pixelData(2)
     })
-    val updatedData = data ++ ByteString(newData)
+    val updatedData = ByteString(newData)
     frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
     updatedData
   }
@@ -242,8 +231,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       currentImage = images(select.id)._1
       horizontalPixelSpacing = currentImage.width / layout.layoutWidth
       globalCursor = (0, 0)
-      lastFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
-      currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+      lastFrame = assembledPixelData(LedCountList, globalCursor)
+      currentFrame = assembledPixelData(LedCountList, globalCursor)
       redFactor = 1.0
       greenFactor = 1.0
       blueFactor = 1.0
@@ -276,11 +265,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
         globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
         lastFrame =
-          if (currentFrame == null) ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+          if (currentFrame == null) assembledPixelData(LedCountList, globalCursor)
           else currentFrame
-        //currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+        //currentFrame = assembledPixelData(ByteString.empty, LedCountList, globalCursor)
       }
-      currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
+      currentFrame = assembledPixelData(LedCountList, globalCursor)
       blending -= 1
 
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
