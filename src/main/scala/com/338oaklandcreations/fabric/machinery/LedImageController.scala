@@ -103,7 +103,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var frameCount = 0L
   var frameBuildTimeMicroSeconds = 0.0
   var frameCountTimeMicroSeconds = 0.0
-  var frameSocketTimeMicroSeconds = 0.0
   var volume = 1.0;
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
@@ -264,17 +263,13 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         blending -= 1
 
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
-        val startsocket = System.nanoTime()
         connection ! Write(ByteString(currentFrame))
-        frameSocketTimeMicroSeconds += (System.nanoTime() - startsocket).toDouble / 1000000.0
 
       if (frameCount % FrameCountInterval == 0) {
-        //logger.info(FrameCountInterval + " Frames at " + frameCountTimeMicroSeconds / FrameCountInterval+ " ms / frame")
+        logger.info(FrameCountInterval + " Frames at " + frameCountTimeMicroSeconds / FrameCountInterval+ " ms / frame")
         logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " ms / frame")
-        //logger.info("Frame comm time " + frameSocketTimeMicroSeconds / FrameCountInterval + " ms / frame")
         frameCountTimeMicroSeconds = 0
         frameBuildTimeMicroSeconds = 0
-        frameSocketTimeMicroSeconds = 0
       }}
     case select: PatternSelect =>
       selectImage(select)
