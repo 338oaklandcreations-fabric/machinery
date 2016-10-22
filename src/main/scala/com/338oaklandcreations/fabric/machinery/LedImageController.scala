@@ -20,11 +20,10 @@
 package com._338oaklandcreations.fabric.machinery
 
 import java.awt.image.BufferedImage
-import java.io.PrintWriter
-import java.net.{InetSocketAddress, Socket}
+import java.net.InetSocketAddress
 import javax.imageio.ImageIO
 
-import akka.actor.{ActorRef, Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
 import org.joda.time.DateTime
@@ -81,9 +80,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   val enableConnect = LedImageControllerConnect(false)
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
-
-  var socket: Socket = null
-  var socketWrite: PrintWriter = null
 
   val layout: LedPlacement = {
     if (apisHost) ApisPlacement
@@ -216,9 +212,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     offsets.foreach({ x =>
       val position = pixelPositions(x)
       val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
-      newData(x * 3) = pixelData(0)
-      newData(x * 3 + 1) = pixelData(1)
-      newData(x * 3 + 2) = pixelData(2)
+      newData(x * 3 + 4) = pixelData(0)
+      newData(x * 3 + 1 + 4) = pixelData(1)
+      newData(x * 3 + 2 + 4) = pixelData(2)
     })
     val updatedData = ByteString(newData)
     frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
@@ -299,8 +295,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         enableConnect.connect = connect
         connection ! Close
       }
-      /*
-    case LedImageControllerConnect(connect) =>
+/*    case LedImageControllerConnect(connect) =>
       enableConnect.connect = connect
       logger.info("Receiving Connect Message")
       if (connect) {
