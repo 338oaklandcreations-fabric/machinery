@@ -20,10 +20,11 @@
 package com._338oaklandcreations.fabric.machinery
 
 import java.awt.image.BufferedImage
-import java.net.InetSocketAddress
+import java.io.PrintWriter
+import java.net.{InetSocketAddress, Socket}
 import javax.imageio.ImageIO
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorRef, Actor, ActorLogging, Props}
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
 import org.joda.time.DateTime
@@ -83,6 +84,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
+  var socket: Socket = null
+  var socketWrite: PrintWriter = null
+
   val layout: LedPlacement = {
     if (apisHost) ApisPlacement
     else if (reedsHost) ReedsPlacement
@@ -104,6 +108,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var currentImage: Image = null
   var frameCount = 0L
   var frameBuildTimeMicroSeconds = 0.0
+  var frameCountTimeMicroSeconds = 0.0
+  var frameSocketTimeMicroSeconds = 0.0
   var volume = 1.0;
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
@@ -163,9 +169,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       context.sender ! heartbeat
     case LedImageControllerConnect(connect) =>
       enableConnect.connect = connect
-      if (enableConnect.connect) IO(Tcp) ! Connect(remote, options = List(SO.TcpNoDelay(false)))
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
     case ConnectionTick =>
-      if (enableConnect.connect) IO(Tcp) ! Connect(remote, options = List(SO.TcpNoDelay(false)))
+      if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
   def pixelByteString(cursor: (Int, Int), blendingFactor: Double, pixelIndex: Int): ByteString = {
@@ -224,7 +230,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       }
       pixelIndex += 1
     })
-    frameBuildTimeMicroSeconds = (System.nanoTime() - startus).toDouble / 1000.0
+    frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
     newData
   }
 
@@ -256,7 +262,10 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def connected(connection: ActorRef): Receive = {
+//  def receive = {
     case FrameTick =>
+      if (enableConnect.connect) {
+        val startus = System.nanoTime()
       frameCount += 1
       if (blending <= 0) {
         blending = (512 - lastPatternSelect.speed * 2) / SpeedModifier
@@ -271,11 +280,23 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       }
       currentFrame = ByteString(0, 0, (NumBytes >> 8).toByte, NumBytes.toByte) ++ assembledPixelData(ByteString.empty, LedCountList, globalCursor)
       blending -= 1
-      connection ! Write(currentFrame)
+
+        frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
+        val startsocket = System.nanoTime()
+        //val data: Array[Byte] = currentFrame.toArray
+        //data.foreach({ byte => socketWrite.print(byte.toChar)})
+        //socketWrite.flush
+        connection ! Write(currentFrame)
+        frameSocketTimeMicroSeconds += (System.nanoTime() - startsocket).toDouble / 1000000.0
+
       if (frameCount % FrameCountInterval == 0) {
-        logger.info(FrameCountInterval + " Frames at " + TickInterval + " / frame")
-        logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " us / frame")
-      }
+        logger.info(FrameCountInterval + " Frames at " + frameCountTimeMicroSeconds / FrameCountInterval+ " ms / frame")
+        logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " ms / frame")
+        logger.info("Frame comm time " + frameSocketTimeMicroSeconds / FrameCountInterval + " ms / frame")
+        frameCountTimeMicroSeconds = 0
+        frameBuildTimeMicroSeconds = 0
+        frameSocketTimeMicroSeconds = 0
+      }}
     case select: PatternSelect =>
       selectImage(select)
     case HeartbeatRequest =>
@@ -287,6 +308,24 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         enableConnect.connect = connect
         connection ! Close
       }
+      /*
+    case LedImageControllerConnect(connect) =>
+      enableConnect.connect = connect
+      logger.info("Receiving Connect Message")
+      if (connect) {
+        if (socket == null) {
+          socket = new Socket(remote.getHostName, remote.getPort)
+          socketWrite = new PrintWriter(socket.getOutputStream(), true)
+        }
+      } else {
+        logger.info("Shutting off Opc")
+        if (socket != null) {
+          socket.close
+          socket = null
+          socketWrite = null
+        }
+      }
+      */
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
       context become receive
