@@ -96,8 +96,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var direction = 1
   var blending = 0
   var baseBlending = 0
-  var lastFrame: ByteString = null
-  var currentFrame: ByteString = null
+  val lastFrame: Array[Byte] = Array.fill[Byte](LedCountList.length * 3 + 4)(0)
+  val currentFrame: Array[Byte] = Array.fill[Byte](LedCountList.length * 3 + 4)(0)
   var images = Map.empty[Int, (Image, String)]
   var currentImage: Image = null
   var frameCount = 0L
@@ -168,11 +168,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
-  def assembledPixelData(offsets: List[Int], cursor: (Int, Int)): ByteString = {
-    var newData = Array.fill[Byte](offsets.length * 3 + 4)(0)
-    newData(2) = (NumBytes >> 8).toByte
-    newData(3) = NumBytes.toByte
-    var count = 0
+  def assembledPixelData(offsets: List[Int], cursor: (Int, Int), frame: Array[Byte]) = {
+    frame(2) = (NumBytes >> 8).toByte
+    frame(3) = NumBytes.toByte
     val startus = System.nanoTime()
     val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
     offsets.foreach({ x =>
@@ -202,26 +200,24 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
 
       if (apisHost) {
-        newData(x * 3 + 4) = blendedRed
-        newData(x * 3 + 1 + 4) = blendedGreen
-        newData(x * 3 + 2 + 4) = blendedBlue
+        frame(x * 3 + 4) = blendedRed
+        frame(x * 3 + 1 + 4) = blendedGreen
+        frame(x * 3 + 2 + 4) = blendedBlue
       } else if (reedsHost) {
-        newData(x * 3 + 4) = blendedBlue
-        newData(x * 3 + 1 + 4) = blendedRed
-        newData(x * 3 + 2 + 4) = blendedGreen
+        frame(x * 3 + 4) = blendedBlue
+        frame(x * 3 + 1 + 4) = blendedRed
+        frame(x * 3 + 2 + 4) = blendedGreen
       } else if (windflowersHost) {
-        newData(x * 3 + 4) = blendedRed
-        newData(x * 3 + 1 + 4) = blendedGreen
-        newData(x * 3 + 2 + 4) = blendedBlue
+        frame(x * 3 + 4) = blendedRed
+        frame(x * 3 + 1 + 4) = blendedGreen
+        frame(x * 3 + 2 + 4) = blendedBlue
       } else {
-        newData(x * 3 + 4) = blendedRed
-        newData(x * 3 + 1 + 4) = blendedGreen
-        newData(x * 3 + 2 + 4) = blendedBlue
+        frame(x * 3 + 4) = blendedRed
+        frame(x * 3 + 1 + 4) = blendedGreen
+        frame(x * 3 + 2 + 4) = blendedBlue
       }
     })
-    val updatedData = ByteString(newData)
     frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
-    updatedData
   }
 
   def selectImage(select: PatternSelect) = {
@@ -230,8 +226,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       currentImage = images(select.id)._1
       horizontalPixelSpacing = currentImage.width / layout.layoutWidth
       globalCursor = (0, 0)
-      lastFrame = assembledPixelData(LedCountList, globalCursor)
-      currentFrame = assembledPixelData(LedCountList, globalCursor)
+      assembledPixelData(LedCountList, globalCursor, lastFrame)
+      assembledPixelData(LedCountList, globalCursor, currentFrame)
       redFactor = 1.0
       greenFactor = 1.0
       blueFactor = 1.0
@@ -252,31 +248,24 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def connected(connection: ActorRef): Receive = {
-//  def receive = {
     case FrameTick =>
       if (enableConnect.connect) {
         val startus = System.nanoTime()
-      frameCount += 1
-      if (blending <= 0) {
-        blending = (512 - lastPatternSelect.speed * 2) / SpeedModifier
-        baseBlending = blending
-        if (currentImage == null || (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1))) direction = -1
-        else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
-        globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
-        lastFrame =
-          if (currentFrame == null) assembledPixelData(LedCountList, globalCursor)
-          else currentFrame
-        //currentFrame = assembledPixelData(ByteString.empty, LedCountList, globalCursor)
-      }
-      currentFrame = assembledPixelData(LedCountList, globalCursor)
-      blending -= 1
+        frameCount += 1
+        if (blending <= 0) {
+          blending = (512 - lastPatternSelect.speed * 2) / SpeedModifier
+          baseBlending = blending
+          if (currentImage == null || (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1))) direction = -1
+          else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
+          globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
+          assembledPixelData(LedCountList, globalCursor, lastFrame)
+        }
+        assembledPixelData(LedCountList, globalCursor, currentFrame)
+        blending -= 1
 
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
         val startsocket = System.nanoTime()
-        //val data: Array[Byte] = currentFrame.toArray
-        //data.foreach({ byte => socketWrite.print(byte.toChar)})
-        //socketWrite.flush
-        connection ! Write(currentFrame)
+        connection ! Write(ByteString(currentFrame))
         frameSocketTimeMicroSeconds += (System.nanoTime() - startsocket).toDouble / 1000000.0
 
       if (frameCount % FrameCountInterval == 0) {
