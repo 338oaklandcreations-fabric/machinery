@@ -209,29 +209,31 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def assembledPixelData(data: ByteString, offsets: List[Int], cursor: (Int, Int)): ByteString = {
-    var newData = data
+    var newData = Array.fill[Byte](offsets.length * 3)(0)
     var count = 0
-    var pixelIndex = 0
     val startus = System.nanoTime()
     val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
-    offsets.map({ x =>
+    offsets.foreach({ x =>
       if (windflowersHost) {
         if (x % 2 == 0) {
           val position = pixelPositions(x)
-          val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, pixelIndex)
+          val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
           newData = newData ++ pixelData ++ pixelData
           count = count + 2
           //newData = newData ++ pixelData
         }
       } else {
         val position = pixelPositions(x)
-        val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, pixelIndex)
-        newData = newData ++ pixelData
+        val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
+        newData(x * 3) = pixelData(0)
+        newData(x * 3 + 1) = pixelData(1)
+        newData(x * 3 + 2) = pixelData(2)
+        //newData = newData ++ pixelData
       }
-      pixelIndex += 1
     })
+    val updatedData = data ++ ByteString(newData)
     frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
-    newData
+    updatedData
   }
 
   def selectImage(select: PatternSelect) = {
