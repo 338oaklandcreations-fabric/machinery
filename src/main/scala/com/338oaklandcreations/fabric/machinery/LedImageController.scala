@@ -168,40 +168,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
   }
 
-  def pixelByteString(cursor: (Int, Int), blendingFactor: Double, pixelIndex: Int): ByteString = {
-    val pixel: Int = try {
-      if (currentImage == null) 0
-      else (currentImage.image.getRGB(cursor._1.max(0).min(currentImage.width - 1), cursor._2.max(0).min(currentImage.height - 1)))
-    } catch {
-      case _: Throwable => throw new IllegalArgumentException
-    }
-
-    val lastRedByte = if (lastFrame == null) 0 else lastFrame(pixelIndex * 3 + 4)
-    val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
-    val newRed = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0)
-    val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
-
-    val lastGreenByte = if (lastFrame == null) 0 else lastFrame(pixelIndex * 3 + 5)
-    val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
-    val newGreen = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0)
-    val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
-
-    val lastBlueByte = if (lastFrame == null) 0 else lastFrame(pixelIndex * 3 + 6)
-    val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
-    val newBlue = ((pixel & 0xFF) * volume * blueFactor).min(255.0)
-    val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
-
-    if (apisHost) {
-      ByteString(blendedRed, blendedGreen, blendedBlue)
-    } else if (reedsHost) {
-      ByteString(blendedBlue, blendedRed, blendedGreen)
-    } else if (windflowersHost) {
-      ByteString(blendedRed, blendedGreen, blendedBlue)
-    } else {
-      ByteString(blendedRed, blendedGreen, blendedBlue)
-    }
-  }
-
   def assembledPixelData(offsets: List[Int], cursor: (Int, Int)): ByteString = {
     var newData = Array.fill[Byte](offsets.length * 3 + 4)(0)
     newData(2) = (NumBytes >> 8).toByte
@@ -211,10 +177,47 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
     offsets.foreach({ x =>
       val position = pixelPositions(x)
-      val pixelData = pixelByteString(((position._1 * horizontalPixelSpacing).toInt, (position._2 + cursor._2).toInt), blendingFactor, x)
-      newData(x * 3 + 4) = pixelData(0)
-      newData(x * 3 + 1 + 4) = pixelData(1)
-      newData(x * 3 + 2 + 4) = pixelData(2)
+      val pixel: Int = try {
+        if (currentImage == null) 0
+        else (currentImage.image.getRGB(
+          (position._1 * horizontalPixelSpacing).toInt.max(0).min(currentImage.width - 1),
+          (position._2 + cursor._2).toInt.max(0).min(currentImage.height - 1)))
+      } catch {
+        case _: Throwable => throw new IllegalArgumentException
+      }
+
+      val lastRedByte = if (lastFrame == null) 0 else lastFrame(x * 3 + 4)
+      val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
+      val newRed = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0)
+      val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
+
+      val lastGreenByte = if (lastFrame == null) 0 else lastFrame(x * 3 + 5)
+      val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
+      val newGreen = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0)
+      val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
+
+      val lastBlueByte = if (lastFrame == null) 0 else lastFrame(x * 3 + 6)
+      val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
+      val newBlue = ((pixel & 0xFF) * volume * blueFactor).min(255.0)
+      val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
+
+      if (apisHost) {
+        newData(x * 3 + 4) = blendedRed
+        newData(x * 3 + 1 + 4) = blendedGreen
+        newData(x * 3 + 2 + 4) = blendedBlue
+      } else if (reedsHost) {
+        newData(x * 3 + 4) = blendedBlue
+        newData(x * 3 + 1 + 4) = blendedRed
+        newData(x * 3 + 2 + 4) = blendedGreen
+      } else if (windflowersHost) {
+        newData(x * 3 + 4) = blendedRed
+        newData(x * 3 + 1 + 4) = blendedGreen
+        newData(x * 3 + 2 + 4) = blendedBlue
+      } else {
+        newData(x * 3 + 4) = blendedRed
+        newData(x * 3 + 1 + 4) = blendedGreen
+        newData(x * 3 + 2 + 4) = blendedBlue
+      }
     })
     val updatedData = ByteString(newData)
     frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
