@@ -111,6 +111,7 @@ object AnimationCycle extends HostAware {
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
+      )
     }
   }
 }
