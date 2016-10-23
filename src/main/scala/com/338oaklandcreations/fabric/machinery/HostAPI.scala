@@ -185,7 +185,8 @@ class HostAPI extends Actor with ActorLogging with HostActor {
         } catch {
           case e: IllegalArgumentException =>
             val monthDayStartTime = MonthDayTimeFormatter.parseDateTime(latestStartTime)
-            startTime = startTime.withDate(monthDayStartTime.getYear, monthDayStartTime.getMonthOfYear, monthDayStartTime.getDayOfMonth)
+            if (startTime == null) new DateTime
+            else startTime = startTime.withDate(monthDayStartTime.getYear, monthDayStartTime.getMonthOfYear, monthDayStartTime.getDayOfMonth)
           case _: Throwable => startTime = new DateTime
         }
       }
