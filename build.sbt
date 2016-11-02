@@ -43,7 +43,7 @@ libraryDependencies ++= {
     "org.specs2"          %%  "specs2-core"          % "2.3.11" % "test",
     "joda-time"           %   "joda-time"            % "2.7",
     "org.joda"            %   "joda-convert"         % "1.2",
-    "com.pubnub"          %   "pubnub"               % "4.2.0")
+    "com.pubnub"          %   "pubnub"               % "4.2.0" excludeAll(ExclusionRule(organization = "org.slf4j")))
 }
 
 Revolver.settings
