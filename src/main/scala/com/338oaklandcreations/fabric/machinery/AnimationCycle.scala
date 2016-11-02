@@ -20,7 +20,7 @@
 package com._338oaklandcreations.fabric.machinery
 
 import com._338oaklandcreations.fabric.machinery.FabricProtos.PatternCommand
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 
 object AnimationCycle extends HostAware {
 
@@ -56,8 +56,8 @@ object AnimationCycle extends HostAware {
   val FS_ID_NARROW_FLAME = 1008
   val FS_ID_FLOWER_FLICKER = 1009
 
-  val ShutdownTime = new DateTime(2016, 1, 1, 14, 0)
-  val StartupTime = new DateTime(2016, 1, 1, 0, 0)
+  var shutdownTime = new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC)
+  var startupTime = new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC)
   val SleepThreshold = 10 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = {
@@ -119,18 +119,24 @@ object AnimationCycle extends HostAware {
 class AnimationCycle extends HostAware {
 
   import AnimationCycle._
+  import SunriseSunset._
 
   var currentStep = 0
   var nextTime = 0L
   var lastPatternSelectTime = 0L
   var lastAnimationStartTime = 0L
+  var sunriseSunsetResponse: SunriseSunsetResponse = null
+
+  def updateSunset(sunTiming: SunriseSunsetResponse) = {
+    startupTime = sunTiming.results.sunset.plusHours(-1).toDateTime(DateTimeZone.UTC)
+  }
 
   def isShutdown: Boolean = {
-    val current = new DateTime
-    if (ShutdownTime.getHourOfDay > StartupTime.getHourOfDay) {
-      current.getHourOfDay >= ShutdownTime.getHourOfDay && current.getHourOfDay < StartupTime.getHourOfDay && !developmentHost
+    val current = new DateTime(DateTimeZone.UTC)
+    if (shutdownTime.getHourOfDay > startupTime.getHourOfDay) {
+      current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < startupTime.getHourOfDay //&& !developmentHost
     } else {
-      current.getHourOfDay >= ShutdownTime.getHourOfDay && (current.getHourOfDay < StartupTime.getHourOfDay + 24) && !developmentHost
+      current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < (startupTime.getHourOfDay - 24) //&& !developmentHost
     }
   }
 
@@ -139,7 +145,7 @@ class AnimationCycle extends HostAware {
   }
 
   def newPatternComing: Boolean = {
-    System.currentTimeMillis() - lastAnimationStartTime > currentPatternTime
+    System.currentTimeMillis - lastAnimationStartTime > currentPatternTime
   }
 
   def currentPatternTime: Long = {

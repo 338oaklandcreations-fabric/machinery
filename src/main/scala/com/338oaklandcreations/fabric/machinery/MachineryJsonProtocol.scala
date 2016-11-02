@@ -19,11 +19,12 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import ApisAPI.{BodyLightPattern, PooferPattern}
 import HostAPI._
 import LedController._
-import com._338oaklandcreations.fabric.machinery.ApisAPI.{PooferPattern, BodyLightPattern}
+import SunriseSunset._
 import org.joda.time.DateTime
-import org.joda.time.format.{ISODateTimeFormat, DateTimeFormatter}
+import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat}
 import spray.json._
 
 object MachineryJsonProtocol extends DefaultJsonProtocol {
@@ -64,5 +65,8 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
 
   implicit val bodyLightsJson = jsonFormat2(BodyLightPattern)
   implicit val pooferJson = jsonFormat1(PooferPattern)
+
+  implicit val sunriseSunsetResults = jsonFormat10(SunriseSunsetResults)
+  implicit val sunriseSunsetResponse = jsonFormat2(SunriseSunsetResponse)
 
 }

@@ -81,7 +81,6 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
   var lastPatternNames = PatternNames(List())
   var ledControllerVersion = LedControllerVersion("", "")
-  var isOff = false
   var lastPatternSelect = PatternCommand(Some(3), Some(150), Some(0), Some(255), Some(150), Some(150))
 
   val enableConnect = LedControllerConnect(false)
@@ -156,24 +155,13 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
       if (select.id == OffPatternId) {
-        isOff = true
-        logger.debug("Off Selected")
+        logger.info("Off Selected")
         val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
-        connection ! Write(bytes)
-      } else if (select.id == -OffPatternId) {
-        isOff = false
-        logger.debug("Off DeSelected")
-        val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
         connection ! Write(bytes)
       } else {
         lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
-        if (isOff) {
-          logger.debug("Storing command because we are off")
-        } else {
-          logger.debug("Sending out command")
-          val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
-          connection ! Write(bytes)
-        }
+        val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
+        connection ! Write(bytes)
       }
     case LedControllerConnect(connect) =>
       logger.info("Receiving Connect Message")

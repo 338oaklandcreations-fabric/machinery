@@ -24,22 +24,27 @@ import java.net.InetSocketAddress
 import akka.actor._
 import akka.util.Timeout
 import com._338oaklandcreations.fabric.machinery.ApisAPI.{BodyLightPattern, PooferPattern}
-import com._338oaklandcreations.fabric.machinery.MachineryController.SleepCheckTick
+import com._338oaklandcreations.fabric.machinery.MachineryController.{ShutdownCheckTick, SleepCheckTick, SunTimingTick}
 import org.slf4j.LoggerFactory
+import spray.json._
 
 import scala.concurrent.duration._
 
 object MachineryController {
 
+  case object ShutdownCheckTick
   case object SleepCheckTick
+  case object SunTimingTick
 
 }
 
 class MachineryController extends Actor with ActorLogging {
 
   import HostAPI._
+  import IotAPI._
   import LedController._
   import LedImageController._
+  import SunriseSunset._
   import context._
 
   implicit val defaultTimeout = Timeout(3 seconds)
@@ -52,51 +57,68 @@ class MachineryController extends Actor with ActorLogging {
   val ledImageController = actorOf(Props(new LedImageController(new InetSocketAddress("127.0.0.1", scala.util.Properties.envOrElse("OPC_SERVER_PORT", "7890").toInt))), "ledImageController")
   val hostAPI = actorOf(Props[HostAPI], "hostAPI")
   val apisAPI = actorOf(Props[ApisAPI], "apisAPI")
+  val sunriseSunsetAPI = actorOf(Props[SunriseSunset], "sunriseSunsetAPI")
+  val iotAPI = actorOf(Props[IotAPI], "iotAPI")
 
   var imageController = false
 
+  val shutdownScheduler = context.system.scheduler.schedule (0 milliseconds, 10 minutes, self, ShutdownCheckTick)
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, 5 seconds, self, SleepCheckTick)
+  val sunTimingTick = context.system.scheduler.schedule (0 milliseconds, 24 hours, self, SunTimingTick)
   val animations = new AnimationCycle
 
   override def preStart = {
     ledController ! LedControllerConnect(true)
     animations.lastPatternSelectTime = System.currentTimeMillis()
+    sunriseSunsetAPI ! LagunaHills
+  }
+
+  def setupController(pattern: PatternSelect) = {
+    if (pattern.id >= LedImageController.LowerId) {
+      if (!imageController) {
+        logger.info("Starting up image controller")
+        imageController = true
+        ledController ! LedControllerConnect(false)
+        Thread.sleep(500)
+        ledImageController ! LedImageControllerConnect(true)
+        Thread.sleep(500)
+      }
+      ledImageController forward pattern
+    } else {
+      if (imageController) {
+        logger.info("Starting up led controller")
+        imageController = false
+        ledImageController ! LedImageControllerConnect(false)
+        Thread.sleep(500)
+        ledController ! LedControllerConnect(true)
+        Thread.sleep(500)
+      }
+      ledController forward pattern
+    }
   }
 
   def receive = {
-    case SleepCheckTick =>
+    case sunrise: SunriseSunsetResponse => {
+      iotAPI ! Message(SunTimingChannel, sunrise.toJson(MachineryJsonProtocol.sunriseSunsetResponse).toString)
+      animations.updateSunset(sunrise)
+    }
+    case SunTimingTick => sunriseSunsetAPI ! LagunaHills
+    case ShutdownCheckTick =>
       if (animations.isShutdown) {
-        self ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
-      } else {
-        if (animations.isSleeping) {
-          if (animations.newPatternComing) {
-            val currentPattern = animations.currentPattern
-            animations.lastAnimationStartTime = System.currentTimeMillis
-            val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
-              currentPattern.speed.get, currentPattern.intensity.get)
-            logger.info("Animation Select: " + nextPattern.id)
-            if (nextPattern.id >= LedImageController.LowerId) {
-              if (!imageController) {
-                logger.info("Starting up image controller")
-                imageController = true
-                ledController ! LedControllerConnect(false)
-                Thread.sleep(500)
-                ledImageController ! LedImageControllerConnect(true)
-                Thread.sleep(500)
-              }
-              ledImageController forward nextPattern
-            } else {
-              if (imageController) {
-                logger.info("Starting up led controller")
-                imageController = false
-                ledImageController ! LedImageControllerConnect(false)
-                Thread.sleep(500)
-                ledController ! LedControllerConnect(true)
-                Thread.sleep(500)
-              }
-              ledController forward nextPattern
-            }
-          }
+        val offPattern = PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
+        self ! offPattern
+        iotAPI ! Message(PatternUpdateChannel, offPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
+      }
+    case SleepCheckTick =>
+      if (!animations.isShutdown &&animations.isSleeping) {
+        if (animations.newPatternComing) {
+          val currentPattern = animations.currentPattern
+          animations.lastAnimationStartTime = System.currentTimeMillis
+          val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
+            currentPattern.speed.get, currentPattern.intensity.get)
+          iotAPI ! Message(PatternUpdateChannel, nextPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
+          logger.warn("Animation Select: " + nextPattern.id)
+          setupController(nextPattern)
         }
       }
     case TimeSeriesRequestCPU =>
@@ -126,29 +148,8 @@ class MachineryController extends Actor with ActorLogging {
       logger.info("PatternNamesRequest")
       ledController forward PatternNamesRequest
     case select: PatternSelect =>
-      logger.info("PatternSelect: " + select.id)
       animations.lastPatternSelectTime = System.currentTimeMillis()
-      if (select.id >= LedImageController.LowerId) {
-        if (!imageController) {
-          logger.info("Starting up image controller")
-          imageController = true
-          ledController ! LedControllerConnect(false)
-          Thread.sleep(500)
-          ledImageController ! LedImageControllerConnect(true)
-          Thread.sleep(500)
-        }
-        ledImageController forward select
-      } else {
-        if (imageController) {
-          logger.info("Starting up led controller")
-          imageController = false
-          ledImageController ! LedImageControllerConnect(false)
-          Thread.sleep(500)
-          ledController ! LedControllerConnect(true)
-          Thread.sleep(500)
-        }
-        ledController forward select
-      }
+      setupController(select)
     case WellLightSettings(power, level) =>
       logger.info("WellLightSettings")
       hostAPI forward WellLightSettings(power, level)

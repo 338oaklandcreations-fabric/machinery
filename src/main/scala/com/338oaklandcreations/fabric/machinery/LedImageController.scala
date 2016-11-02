@@ -222,6 +222,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def selectImage(select: PatternSelect) = {
     frameCount = 0
     if (currentImage != images(select.id)._1) {
+      logger.info("PatternSelect: " + select.id)
       currentImage = images(select.id)._1
       horizontalPixelSpacing = currentImage.width / layout.layoutWidth
       globalCursor = (0, 0)
@@ -282,23 +283,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         enableConnect.connect = connect
         connection ! Close
       }
-/*    case LedImageControllerConnect(connect) =>
-      enableConnect.connect = connect
-      logger.info("Receiving Connect Message")
-      if (connect) {
-        if (socket == null) {
-          socket = new Socket(remote.getHostName, remote.getPort)
-          socketWrite = new PrintWriter(socket.getOutputStream(), true)
-        }
-      } else {
-        logger.info("Shutting off Opc")
-        if (socket != null) {
-          socket.close
-          socket = null
-          socketWrite = null
-        }
-      }
-      */
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
       context become receive
