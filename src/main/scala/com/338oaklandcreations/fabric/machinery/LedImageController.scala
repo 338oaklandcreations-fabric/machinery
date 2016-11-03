@@ -43,9 +43,9 @@ object LedImageController extends HostActor with HostAware {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val FrameCountInterval = 50
+  val FrameCountInterval = 60
   val TickInterval = {
-    16 milliseconds
+    ((1 / FrameCountInterval) * 1000) milliseconds
   }
 
   val SpeedModifier = 1
@@ -117,8 +117,13 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       images = images + (id -> (Image(image.getHeight, image.getWidth, image), name))
     }
 
-    val imageList = List("1000-Flames.jpg", "1001-Seahorse.jpg", "1002-Sparkle.png", "1003-Underwater.png", "1004-Blue Wave.jpg",
-         "1005-Gold Bubbles.png", "1006-Grape Sunset.png", "1007-Purple Bubbles.png", "1008-Narrow Flames.jpg", "1009-Flower Flicker.jpg")
+    val imageList = List(
+      "1000-Flames.jpg", "1001-Seahorse.jpg",
+      "1002-Sparkle.png", "1003-Underwater.png",
+      "1004-Blue Wave.jpg", "1005-Gold Bubbles.png",
+      "1006-Grape Sunset.png", "1007-Purple Bubbles.png",
+      "1008-Narrow Flames.jpg", "1009-Flower Flicker.jpg"
+    )
     imageList.foreach({ filename =>
       try {
         logger.info("Identifying image file: " + filename)
@@ -237,6 +242,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       redFactor = (select.red - 128.0) / 128.0 + 1.0
       greenFactor = (select.green - 128.0) / 128.0 + 1.0
       blueFactor = (select.blue - 128.0) / 128.0 + 1.0
+      volume = lastPatternSelect.intensity.toFloat / 255.0
       lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
     }
   }
@@ -253,28 +259,29 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         val startus = System.nanoTime()
         frameCount += 1
         if (blending <= 0) {
-          blending = (512 - lastPatternSelect.speed * 2) / SpeedModifier
+          assembledPixelData(LedCountList, globalCursor, lastFrame)
+          globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
+          blending = (256 - lastPatternSelect.speed) / SpeedModifier
           baseBlending = blending
           if (currentImage == null || (direction == 1 && (globalCursor._2 + PixelHop >= currentImage.height - 1))) direction = -1
           else if (direction == -1 && (globalCursor._2 - PixelHop <= 0)) direction = 1
-          globalCursor = (globalCursor._1, globalCursor._2 + direction * PixelHop)
-          assembledPixelData(LedCountList, globalCursor, lastFrame)
         }
         assembledPixelData(LedCountList, globalCursor, currentFrame)
         blending -= 1
 
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
         connection ! Write(ByteString(currentFrame))
-
-      if (frameCount % FrameCountInterval == 0) {
-        logger.info(FrameCountInterval + " Frames at " + frameCountTimeMicroSeconds / FrameCountInterval+ " ms / frame")
-        logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " ms / frame")
-        frameCountTimeMicroSeconds = 0
-        frameBuildTimeMicroSeconds = 0
-      }}
+        if (frameCount % FrameCountInterval == 0) {
+          logger.info(FrameCountInterval + " Frames at " + frameCountTimeMicroSeconds / FrameCountInterval + " ms / frame")
+          logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " ms / frame")
+          frameCountTimeMicroSeconds = 0
+          frameBuildTimeMicroSeconds = 0
+        }
+      }
     case select: PatternSelect =>
       selectImage(select)
     case HeartbeatRequest =>
+      logger.warn (heartbeat.toString)
       context.sender ! heartbeat
     case LedImageControllerConnect(connect) =>
       logger.info("Receiving Connect Message")

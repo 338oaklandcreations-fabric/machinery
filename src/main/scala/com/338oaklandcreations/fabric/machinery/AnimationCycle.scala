@@ -134,9 +134,9 @@ class AnimationCycle extends HostAware {
   def isShutdown: Boolean = {
     val current = new DateTime(DateTimeZone.UTC)
     if (shutdownTime.getHourOfDay > startupTime.getHourOfDay) {
-      current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < startupTime.getHourOfDay //&& !developmentHost
+      (current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < startupTime.getHourOfDay) && !developmentHost
     } else {
-      current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < (startupTime.getHourOfDay - 24) //&& !developmentHost
+      (current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < (startupTime.getHourOfDay - 24)) && !developmentHost
     }
   }
 

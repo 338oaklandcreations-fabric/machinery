@@ -132,7 +132,7 @@ class MachineryController extends Actor with ActorLogging {
       hostAPI forward HostStatisticsRequest
     case HeartbeatRequest =>
       logger.info("HeartbeatRequest")
-      Thread.sleep(1000)
+      Thread.sleep(500)
       if (imageController) {
         ledImageController forward HeartbeatRequest
       } else {
