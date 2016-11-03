@@ -83,6 +83,7 @@ class SunriseSunset extends Actor with ActorLogging {
   }
 
   override def preStart = {
+    Thread.sleep(10000)
     currentTiming = updatedTiming(Rockridge)
   }
 
