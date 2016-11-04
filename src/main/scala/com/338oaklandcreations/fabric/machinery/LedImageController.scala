@@ -227,7 +227,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def selectImage(select: PatternSelect) = {
     frameCount = 0
     if (currentImage != images(select.id)._1) {
-      logger.info("PatternSelect: " + select.id)
+      logger.warn("PatternSelect: " + select.id)
       currentImage = images(select.id)._1
       horizontalPixelSpacing = currentImage.width / layout.layoutWidth
       globalCursor = (0, 0)
@@ -272,8 +272,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
         connection ! Write(ByteString(currentFrame))
         if (frameCount % FrameCountInterval == 0) {
-          logger.info(FrameCountInterval + " Frames at " + frameCountTimeMicroSeconds / FrameCountInterval + " ms / frame")
-          logger.info("Frame build time " + frameBuildTimeMicroSeconds / FrameCountInterval + " ms / frame")
+          logger.info(FrameCountInterval + " Frames at " + "%1.3f".format(frameCountTimeMicroSeconds / FrameCountInterval) + " ms / frame")
+          logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMicroSeconds / FrameCountInterval) + " ms / frame")
           frameCountTimeMicroSeconds = 0
           frameBuildTimeMicroSeconds = 0
         }

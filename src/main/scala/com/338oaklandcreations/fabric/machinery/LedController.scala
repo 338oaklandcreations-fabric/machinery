@@ -123,7 +123,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
           lastHeartbeat = Heartbeat(new DateTime, hb.messageTypeID.getOrElse(0), hb.versionID.getOrElse(0), hb.currentPattern.getOrElse(0),
             hb.red.getOrElse(0), hb.green.getOrElse(0), hb.blue.getOrElse(0), hb.speed.getOrElse(0), hb.intensity.getOrElse(0),
             hb.memberType.getOrElse(0), hb.currentPatternName.getOrElse(""))
-          logger.warn (lastHeartbeat.toString)
+          logger.info (lastHeartbeat.toString)
         case Msg.PatternNames(pn) =>
           val names: List[String] = pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || (i + 1) == OffPatternId) "" else (i + 1).toString + "-" + n}) ++ LedImageController.PatternNames
           lastPatternNames = PatternNames(names.filter(!_.isEmpty))
@@ -159,6 +159,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
         val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
         connection ! Write(bytes)
       } else {
+        logger.warn("PatternSelect: " + select.id)
         lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
         val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
         connection ! Write(bytes)
