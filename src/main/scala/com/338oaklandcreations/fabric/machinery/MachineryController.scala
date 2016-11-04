@@ -70,7 +70,6 @@ class MachineryController extends Actor with ActorLogging {
   override def preStart = {
     ledController ! LedControllerConnect(true)
     animations.lastPatternSelectTime = System.currentTimeMillis()
-    sunriseSunsetAPI ! LagunaHills
   }
 
   def setupController(pattern: PatternSelect) = {
