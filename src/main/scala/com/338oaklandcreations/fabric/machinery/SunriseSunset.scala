@@ -79,12 +79,8 @@ class SunriseSunset extends Actor with ActorLogging {
     } catch {
       case x: Throwable =>
     }
+    logger.warn("Sun timing updated: " + currentTiming)
     currentTiming
-  }
-
-  override def preStart = {
-    Thread.sleep(10000)
-    currentTiming = updatedTiming(Rockridge)
   }
 
   def receive = {
