@@ -27,6 +27,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.util.Properties._
+import ch.qos.logback.classic.Level
 
 object MachineryServer extends App with SslConfiguration {
 
@@ -39,6 +40,9 @@ object MachineryServer extends App with SslConfiguration {
     val port = envOrElse("PORT", config.getString("server.port"))
 
     val server = system.actorOf(Props[MachineryRoutesServiceActor], "MachineryRoutesServiceActor")
+
+    val root = org.slf4j.LoggerFactory.getLogger("root").asInstanceOf[ch.qos.logback.classic.Logger]
+    root.setLevel(Level.WARN)
 
     if (args.length > 0) IO(Http) ? Http.Bind(server, "0.0.0.0", args(0).toInt)
     else IO(Http) ? Http.Bind(server, "0.0.0.0", port.toInt)
