@@ -72,20 +72,19 @@ class SunriseSunset extends Actor with ActorLogging {
   }
 
   def updatedTiming(location: Location): SunriseSunsetResponse = {
-    try {
-      val request = HttpRequest(HttpMethods.GET, uri(location))
-      val response: String = Await.result ((hostConnector ? request).mapTo[HttpResponse], CallTimeout) ~> unmarshal[String]
-      currentTiming = response.parseJson.convertTo[SunriseSunsetResponse](MachineryJsonProtocol.sunriseSunsetResponse)
-    } catch {
-      case x: Throwable =>
-    }
-    logger.warn("Sun timing updated: " + currentTiming)
-    currentTiming
   }
 
   def receive = {
     case location: Location =>
-      sender ! updatedTiming(location)
+      try {
+        val request = HttpRequest(HttpMethods.GET, uri(location))
+        val response: String = Await.result ((hostConnector ? request).mapTo[HttpResponse], CallTimeout) ~> unmarshal[String]
+        currentTiming = response.parseJson.convertTo[SunriseSunsetResponse](MachineryJsonProtocol.sunriseSunsetResponse)
+        logger.warn("Sun timing updated: " + currentTiming)
+      } catch {
+        case x: Throwable => logger.error("Could not update sun timing")
+      }
+      sender ! currentTiming
     case x => sender ! "UNKNOWN REQUEST TYPE: " + x.toString
   }
 
