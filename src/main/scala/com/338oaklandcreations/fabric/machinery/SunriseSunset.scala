@@ -63,10 +63,6 @@ class SunriseSunset extends Actor with ActorLogging {
       DateTime.now, DateTime.now, DateTime.now),
     "")
 
-  val hostConnector = Await.result (IO(Http) ? Http.HostConnectorSetup(ApiHost), CallTimeout) match {
-    case Http.HostConnectorInfo(hostConnector, _) => hostConnector
-  }
-
   def uri(location: Location): String = {
     "http://" + ApiHost + "/json?lat=" + location.latitude + "&lng=" + location.longitude + "&formatted=0"
   }
@@ -74,6 +70,9 @@ class SunriseSunset extends Actor with ActorLogging {
   def receive = {
     case location: Location =>
       try {
+        val hostConnector = Await.result (IO(Http) ? Http.HostConnectorSetup(ApiHost), CallTimeout) match {
+          case Http.HostConnectorInfo(hostConnector, _) => hostConnector
+        }
         val request = HttpRequest(HttpMethods.GET, uri(location))
         val response: String = Await.result ((hostConnector ? request).mapTo[HttpResponse], CallTimeout) ~> unmarshal[String]
         currentTiming = response.parseJson.convertTo[SunriseSunsetResponse](MachineryJsonProtocol.sunriseSunsetResponse)
