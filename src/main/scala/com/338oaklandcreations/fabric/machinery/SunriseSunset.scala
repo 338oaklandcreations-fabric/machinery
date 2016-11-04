@@ -71,9 +71,6 @@ class SunriseSunset extends Actor with ActorLogging {
     "http://" + ApiHost + "/json?lat=" + location.latitude + "&lng=" + location.longitude + "&formatted=0"
   }
 
-  def updatedTiming(location: Location): SunriseSunsetResponse = {
-  }
-
   def receive = {
     case location: Location =>
       try {
