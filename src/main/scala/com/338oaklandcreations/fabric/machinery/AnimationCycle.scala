@@ -58,7 +58,7 @@ object AnimationCycle extends HostAware {
 
   var shutdownTime = new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC)
   var startupTime = new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC)
-  val SleepThreshold = 10 * 60 * 1000
+  val SleepThreshold = 1 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = {
     if (reedsHost) {
