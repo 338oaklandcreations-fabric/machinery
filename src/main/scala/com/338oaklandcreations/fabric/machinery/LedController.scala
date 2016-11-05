@@ -85,7 +85,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
 
   val enableConnect = LedControllerConnect(false)
   val tickInterval = 5 seconds
-  val tickScheduler = context.system.scheduler.schedule (5 seconds, tickInterval, self, LedControllerTick)
+  val tickScheduler = context.system.scheduler.schedule (1 minute, tickInterval, self, LedControllerTick)
 
   def receive = {
     case CommandFailed(_: Connect) =>
