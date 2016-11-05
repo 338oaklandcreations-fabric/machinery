@@ -43,7 +43,12 @@ object LedImageController extends HostActor with HostAware {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val FrameRate = 20
+  val FrameRate = {
+    if (reedsHost) 60
+    else if (windflowersHost) 15
+    else 15
+  }
+  val FrameDisplayRate = FrameRate * 10
   val TickInterval = ((1 / FrameRate) * 1000).toInt milliseconds
 
   val SpeedModifier = 1
@@ -83,7 +88,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     if (apisHost) ApisPlacement
     else if (reedsHost) ReedsPlacement
     else if (windflowersHost) WindflowersPlacement
-    else WindflowersPlacement
+    else ReedsPlacement
   }
 
   val pixelPositions: List[(Double, Double)] = layout.positions
@@ -269,9 +274,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
         connection ! Write(ByteString(currentFrame))
-        if (frameCount % (FrameRate * 5) == 0) {
-          logger.info(FrameRate + " Frames at " + "%1.3f".format(frameCountTimeMicroSeconds / FrameRate) + " ms / frame")
-          logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMicroSeconds / FrameRate) + " ms / frame")
+        if (frameCount % FrameDisplayRate == 0) {
+          logger.info(FrameDisplayRate + " Frames at " + "%1.3f".format(frameCountTimeMicroSeconds / FrameDisplayRate) + " ms / frame")
+          logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMicroSeconds / FrameDisplayRate) + " ms / frame")
           frameCount = 0
           frameCountTimeMicroSeconds = 0
           frameBuildTimeMicroSeconds = 0
