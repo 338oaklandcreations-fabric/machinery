@@ -109,7 +109,7 @@ class MachineryController extends Actor with ActorLogging {
         iotAPI ! Message(PatternUpdateChannel, offPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
       }
     case SleepCheckTick =>
-      if (!animations.isShutdown &&animations.isSleeping) {
+      if (!animations.isShutdown && animations.isSleeping) {
         if (animations.newPatternComing) {
           val currentPattern = animations.currentPattern
           animations.lastAnimationStartTime = System.currentTimeMillis
