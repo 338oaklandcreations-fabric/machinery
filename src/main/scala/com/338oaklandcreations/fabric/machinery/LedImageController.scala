@@ -43,10 +43,8 @@ object LedImageController extends HostActor with HostAware {
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
-  val FrameRate = 40
-  val TickInterval = {
-    ((1 / FrameRate) * 1000) milliseconds
-  }
+  val FrameRate = 20
+  val TickInterval = ((1 / FrameRate) * 1000).toInt milliseconds
 
   val SpeedModifier = 1
   val PixelHop = {
@@ -271,9 +269,10 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
         frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
         connection ! Write(ByteString(currentFrame))
-        if (frameCount % FrameRate == 0) {
+        if (frameCount % (FrameRate * 5) == 0) {
           logger.info(FrameRate + " Frames at " + "%1.3f".format(frameCountTimeMicroSeconds / FrameRate) + " ms / frame")
           logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMicroSeconds / FrameRate) + " ms / frame")
+          frameCount = 0
           frameCountTimeMicroSeconds = 0
           frameBuildTimeMicroSeconds = 0
         }
