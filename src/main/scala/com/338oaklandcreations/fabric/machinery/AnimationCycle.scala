@@ -123,7 +123,7 @@ class AnimationCycle extends HostAware {
 
   var currentStep = 0
   var nextTime = 0L
-  var lastPatternSelectTime = 0L
+  var lastPatternSelectTime = System.currentTimeMillis
   var lastAnimationStartTime = 0L
   var sunriseSunsetResponse: SunriseSunsetResponse = null
 
@@ -153,7 +153,7 @@ class AnimationCycle extends HostAware {
   }
 
   def currentPattern: PatternCommand = {
-    if (System.currentTimeMillis() - lastAnimationStartTime > currentPatternTime) incrementStep
+    if (System.currentTimeMillis - lastAnimationStartTime > currentPatternTime) incrementStep
     Steps(currentStep)._2
   }
 

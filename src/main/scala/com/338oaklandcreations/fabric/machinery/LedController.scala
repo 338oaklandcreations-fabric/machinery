@@ -92,7 +92,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       logger.warn("Failed connect to connect to LED Controller")
       context.parent ! NodeConnectionFailed
     case c @ Connected(remote, local) =>
-      logger.info("Connected: " + self.path.name)
+      logger.info("Connected: " + c)
       val connection = sender
       connection ! Register(self)
       connection ! Write(ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_OPC_CONNECT))).toByteArray))
@@ -106,6 +106,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
     case LedControllerTick =>
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
+    case _ => logger.warn("Not connected yet")
   }
 
   def connected(connection: ActorRef): Receive = {
@@ -114,7 +115,6 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       connection ! Write(data)
     case CommandFailed(w: Write) =>
       logger.warn("Write Failed")
-      // O/S buffer was full
       context.parent ! NodeWriteFailed
     case Received(data) =>
       val wrapperMessage = FabricProtos.FabricWrapperMessage.parseFrom(data.toArray)
@@ -178,6 +178,8 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       lastPatternNames = PatternNames(List())
       context.parent ! NodeConnectionClosed
       context become receive
+    case c @ Connected(remote, local) =>
+      logger.error("Extra connection: " + c)
     case unknown => logger.info("Unknown Message " + unknown.toString)
   }
 }

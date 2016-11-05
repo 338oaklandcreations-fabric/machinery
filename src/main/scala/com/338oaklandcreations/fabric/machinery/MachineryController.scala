@@ -67,11 +67,6 @@ class MachineryController extends Actor with ActorLogging {
   val sunTimingTick = context.system.scheduler.schedule (1 minute, 24 hours, self, SunTimingTick)
   val animations = new AnimationCycle
 
-  override def preStart = {
-    ledController ! LedControllerConnect(true)
-    animations.lastPatternSelectTime = System.currentTimeMillis()
-  }
-
   def setupController(pattern: PatternSelect) = {
     if (pattern.id >= LedImageController.LowerId) {
       if (!imageController) {
