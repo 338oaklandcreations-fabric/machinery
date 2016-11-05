@@ -49,7 +49,7 @@ object LedImageController extends HostActor with HostAware {
     else 15
   }
   val FrameDisplayRate = FrameRate * 10
-  val TickInterval = ((1 / FrameRate) * 1000).toInt milliseconds
+  val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
 
   val SpeedModifier = 1
   val PixelHop = {
@@ -88,7 +88,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     if (apisHost) ApisPlacement
     else if (reedsHost) ReedsPlacement
     else if (windflowersHost) WindflowersPlacement
-    else ReedsPlacement
+    else WindflowersPlacement
   }
 
   val pixelPositions: List[(Double, Double)] = layout.positions
@@ -178,7 +178,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def assembledPixelData(offsets: List[Int], cursor: (Int, Int), frame: Array[Byte]) = {
     frame(2) = (NumBytes >> 8).toByte
     frame(3) = NumBytes.toByte
-    val startus = System.nanoTime()
+    val startus = System.nanoTime
     val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
     offsets.foreach({ x =>
       val position = pixelPositions(x)
@@ -224,7 +224,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         frame(x * 3 + 2 + 4) = blendedBlue
       }
     })
-    frameBuildTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
+    frameBuildTimeMicroSeconds += (System.nanoTime - startus).toDouble / 1000000.0
   }
 
   def selectImage(select: PatternSelect) = {
@@ -259,7 +259,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
       if (enableConnect.connect) {
-        val startus = System.nanoTime()
+        val startus = System.nanoTime
         frameCount += 1
         if (blending <= 0) {
           assembledPixelData(LedCountList, globalCursor, lastFrame)
@@ -272,13 +272,12 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         assembledPixelData(LedCountList, globalCursor, currentFrame)
         blending -= 1
 
-        frameCountTimeMicroSeconds += (System.nanoTime() - startus).toDouble / 1000000.0
         connection ! Write(ByteString(currentFrame))
         if (frameCount % FrameDisplayRate == 0) {
-          logger.info(FrameDisplayRate + " Frames at " + "%1.3f".format(frameCountTimeMicroSeconds / FrameDisplayRate) + " ms / frame")
+          logger.info(FrameDisplayRate + " Frames at " + "%1.3f".format((System.nanoTime - frameCountTimeMicroSeconds) / FrameDisplayRate / 1000000.0) + " ms / frame")
           logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMicroSeconds / FrameDisplayRate) + " ms / frame")
           frameCount = 0
-          frameCountTimeMicroSeconds = 0
+          frameCountTimeMicroSeconds = System.nanoTime
           frameBuildTimeMicroSeconds = 0
         }
       }
