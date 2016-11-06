@@ -45,8 +45,8 @@ object LedImageController extends HostActor with HostAware {
   val ConnectionTickInterval = 5 seconds
   val FrameRate = {
     if (reedsHost) 60
-    else if (windflowersHost) 15
-    else 15
+    else if (windflowersHost) 20
+    else 20
   }
   val FrameDisplayRate = FrameRate * 10
   val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
@@ -104,8 +104,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var images = Map.empty[Int, (Image, String)]
   var currentImage: Image = null
   var frameCount = 0L
-  var frameBuildTimeMicroSeconds = 0.0
-  var frameCountTimeMicroSeconds = 0.0
+  var frameBuildTimeMilliSeconds = 0.0
+  var frameCountTimeMilliSeconds = 0.0
   var volume = 1.0;
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
@@ -224,7 +224,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         frame(x * 3 + 2 + 4) = blendedBlue
       }
     })
-    frameBuildTimeMicroSeconds += (System.nanoTime - startus).toDouble / 1000000.0
+    frameBuildTimeMilliSeconds += (System.nanoTime - startus).toDouble / 1000000.0
   }
 
   def selectImage(select: PatternSelect) = {
@@ -259,7 +259,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def connected(connection: ActorRef): Receive = {
     case FrameTick =>
       if (enableConnect.connect) {
-        val startus = System.nanoTime
         frameCount += 1
         if (blending <= 0) {
           assembledPixelData(LedCountList, globalCursor, lastFrame)
@@ -274,11 +273,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
         connection ! Write(ByteString(currentFrame))
         if (frameCount % FrameDisplayRate == 0) {
-          logger.info(FrameDisplayRate + " Frames at " + "%1.3f".format((System.nanoTime - frameCountTimeMicroSeconds) / FrameDisplayRate / 1000000.0) + " ms / frame")
-          logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMicroSeconds / FrameDisplayRate) + " ms / frame")
+          logger.info(FrameDisplayRate + " Frames at " + "%1.3f".format((System.nanoTime / 1000000.0 - frameCountTimeMilliSeconds) / FrameDisplayRate) + " ms / frame")
+          logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMilliSeconds / FrameDisplayRate) + " ms / frame")
           frameCount = 0
-          frameCountTimeMicroSeconds = System.nanoTime
-          frameBuildTimeMicroSeconds = 0
+          frameCountTimeMilliSeconds = System.nanoTime / 1000000.0
+          frameBuildTimeMilliSeconds = 0
         }
       }
     case select: PatternSelect =>
