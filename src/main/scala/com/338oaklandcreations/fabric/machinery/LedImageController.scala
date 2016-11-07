@@ -179,51 +179,54 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     frame(2) = (NumBytes >> 8).toByte
     frame(3) = NumBytes.toByte
     val startus = System.nanoTime
-    val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
-    offsets.foreach({ x =>
-      val position = pixelPositions(x)
-      val pixel: Int = try {
-        if (currentImage == null) 0
-        else (currentImage.image.getRGB(
-          (position._1 * horizontalPixelSpacing).toInt.max(0).min(currentImage.width - 1),
-          (position._2 + cursor._2).toInt.max(0).min(currentImage.height - 1)))
-      } catch {
-        case _: Throwable => throw new IllegalArgumentException
-      }
+    if (currentImage == null || lastFrame == null) {
+      offsets.foreach({ x =>
+        frame(x * 3 + 4) = 0
+        frame(x * 3 + 1 + 4) = 0
+        frame(x * 3 + 2 + 4) = 0
+      })
+    } else {
+      val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
+      offsets.foreach({ x =>
+        val position = pixelPositions(x)
+        val pixel: Int = try {
+          currentImage.image.getRGB(
+            (position._1 * horizontalPixelSpacing).toInt.max(0).min(currentImage.width - 1),
+            (position._2 + cursor._2).toInt.max(0).min(currentImage.height - 1))
+        } catch {
+          case _: Throwable => throw new IllegalArgumentException
+        }
 
-      val lastRedByte = if (lastFrame == null) 0 else lastFrame(x * 3 + 4)
-      val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
-      val newRed = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0)
-      val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
+        val lastRedByte = lastFrame(x * 3 + 4)
+        val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
+        val newRed = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0)
+        val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
 
-      val lastGreenByte = if (lastFrame == null) 0 else lastFrame(x * 3 + 5)
-      val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
-      val newGreen = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0)
-      val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
+        val lastGreenByte = lastFrame(x * 3 + 5)
+        val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
+        val newGreen = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0)
+        val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
 
-      val lastBlueByte = if (lastFrame == null) 0 else lastFrame(x * 3 + 6)
-      val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
-      val newBlue = ((pixel & 0xFF) * volume * blueFactor).min(255.0)
-      val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
+        val lastBlueByte = lastFrame(x * 3 + 6)
+        val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
+        val newBlue = ((pixel & 0xFF) * volume * blueFactor).min(255.0)
+        val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
 
-      if (apisHost) {
-        frame(x * 3 + 4) = blendedRed
-        frame(x * 3 + 1 + 4) = blendedGreen
-        frame(x * 3 + 2 + 4) = blendedBlue
-      } else if (reedsHost) {
-        frame(x * 3 + 4) = blendedBlue
-        frame(x * 3 + 1 + 4) = blendedRed
-        frame(x * 3 + 2 + 4) = blendedGreen
-      } else if (windflowersHost) {
-        frame(x * 3 + 4) = blendedRed
-        frame(x * 3 + 1 + 4) = blendedGreen
-        frame(x * 3 + 2 + 4) = blendedBlue
-      } else {
-        frame(x * 3 + 4) = blendedRed
-        frame(x * 3 + 1 + 4) = blendedGreen
-        frame(x * 3 + 2 + 4) = blendedBlue
-      }
-    })
+        if (apisHost || windflowersHost) {
+          frame(x * 3 + 4) = blendedRed
+          frame(x * 3 + 1 + 4) = blendedGreen
+          frame(x * 3 + 2 + 4) = blendedBlue
+        } else if (reedsHost) {
+          frame(x * 3 + 4) = blendedBlue
+          frame(x * 3 + 1 + 4) = blendedRed
+          frame(x * 3 + 2 + 4) = blendedGreen
+        } else {
+          frame(x * 3 + 4) = blendedRed
+          frame(x * 3 + 1 + 4) = blendedGreen
+          frame(x * 3 + 2 + 4) = blendedBlue
+        }
+      })
+    }
     frameBuildTimeMilliSeconds += (System.nanoTime - startus).toDouble / 1000000.0
   }
 
