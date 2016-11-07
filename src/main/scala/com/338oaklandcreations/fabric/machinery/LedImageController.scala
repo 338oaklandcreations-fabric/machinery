@@ -188,7 +188,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     } else {
       val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
       offsets.foreach({ x =>
-        val position = pixelPositions(x)
+        val position = pixelPositions((x - 4) / 3)
         val pixel: Int = try {
           currentImage.image.getRGB(
             (position._1 * horizontalPixelSpacing).toInt.max(0).min(currentImage.width - 1),
