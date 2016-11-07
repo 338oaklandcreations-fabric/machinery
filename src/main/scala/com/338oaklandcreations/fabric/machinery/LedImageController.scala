@@ -63,7 +63,7 @@ object LedImageController extends HostActor with HostAware {
     else WindflowersPlacement.positions.length
   }
 
-  val LedCountList = (0 to LedCount - 1).toList
+  val LedCountList = (0 to LedCount - 1).toList.map(_ * 3 + 4)
   val NumBytes = LedCount * 3
   val LowerId = 1000
   var PatternNames = List.empty[String]
@@ -106,7 +106,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   var frameCount = 0L
   var frameBuildTimeMilliSeconds = 0.0
   var frameCountTimeMilliSeconds = 0.0
-  var volume = 1.0;
+  var volume = 1.0
 
   var lastPatternSelect: PatternSelect = PatternSelect(0, 0, 0, 0, 0, 0)
   var redFactor = 1.0
@@ -181,9 +181,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     val startus = System.nanoTime
     if (currentImage == null || lastFrame == null) {
       offsets.foreach({ x =>
-        frame(x * 3 + 4) = 0
-        frame(x * 3 + 1 + 4) = 0
-        frame(x * 3 + 2 + 4) = 0
+        frame(x) = 0
+        frame(x + 1) = 0
+        frame(x + 2) = 0
       })
     } else {
       val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
@@ -197,33 +197,33 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
           case _: Throwable => throw new IllegalArgumentException
         }
 
-        val lastRedByte = lastFrame(x * 3 + 4)
+        val lastRedByte = lastFrame(x)
         val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
-        val newRed = ((pixel >> 16 & 0xFF) * volume * redFactor).min(255.0)
+        val newRed = ((pixel >> 16 & 0xFF) * redFactor).min(255.0)
         val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
 
-        val lastGreenByte = lastFrame(x * 3 + 5)
+        val lastGreenByte = lastFrame(x + 1)
         val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
-        val newGreen = ((pixel >> 8 & 0xFF) * volume * greenFactor).min(255.0)
+        val newGreen = ((pixel >> 8 & 0xFF) * greenFactor).min(255.0)
         val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
 
-        val lastBlueByte = lastFrame(x * 3 + 6)
+        val lastBlueByte = lastFrame(x + 2)
         val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
-        val newBlue = ((pixel & 0xFF) * volume * blueFactor).min(255.0)
+        val newBlue = ((pixel & 0xFF) * blueFactor).min(255.0)
         val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
 
         if (apisHost || windflowersHost) {
-          frame(x * 3 + 4) = blendedRed
-          frame(x * 3 + 1 + 4) = blendedGreen
-          frame(x * 3 + 2 + 4) = blendedBlue
+          frame(x) = blendedRed
+          frame(x + 1) = blendedGreen
+          frame(x + 2) = blendedBlue
         } else if (reedsHost) {
-          frame(x * 3 + 4) = blendedBlue
-          frame(x * 3 + 1 + 4) = blendedRed
-          frame(x * 3 + 2 + 4) = blendedGreen
+          frame(x) = blendedBlue
+          frame(x + 1) = blendedRed
+          frame(x + 2) = blendedGreen
         } else {
-          frame(x * 3 + 4) = blendedRed
-          frame(x * 3 + 1 + 4) = blendedGreen
-          frame(x * 3 + 2 + 4) = blendedBlue
+          frame(x) = blendedRed
+          frame(x + 1) = blendedGreen
+          frame(x + 2) = blendedBlue
         }
       })
     }
@@ -239,16 +239,16 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       globalCursor = (0, 0)
       assembledPixelData(LedCountList, globalCursor, lastFrame)
       assembledPixelData(LedCountList, globalCursor, currentFrame)
-      redFactor = 1.0
-      greenFactor = 1.0
-      blueFactor = 1.0
+      volume = lastPatternSelect.intensity.toFloat / 255.0
+      redFactor = lastPatternSelect.intensity.toFloat / 255.0
+      greenFactor = lastPatternSelect.intensity.toFloat / 255.0
+      blueFactor = lastPatternSelect.intensity.toFloat / 255.0
       lastPatternSelect = PatternSelect(select.id, 128, 128, 128, select.speed, select.intensity)
-      volume = lastPatternSelect.intensity.toFloat / 255.0
     } else {
-      redFactor = (select.red - 128.0) / 128.0 + 1.0
-      greenFactor = (select.green - 128.0) / 128.0 + 1.0
-      blueFactor = (select.blue - 128.0) / 128.0 + 1.0
       volume = lastPatternSelect.intensity.toFloat / 255.0
+      redFactor = (((select.red - 128.0) / 128.0 + 1.0) * volume).min(255.0)
+      greenFactor = (((select.green - 128.0) / 128.0 + 1.0) * volume).min(255.0)
+      blueFactor = (((select.blue - 128.0) / 128.0 + 1.0) * volume).min(255.0)
       lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
     }
   }
