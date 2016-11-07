@@ -48,7 +48,7 @@ object LedImageController extends HostActor with HostAware {
     else if (windflowersHost) 25
     else 25
   }
-  val FrameDisplayRate = FrameRate * 100
+  val FrameDisplayRate = FrameRate * 200
   val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
 
   val SpeedModifier = 1
@@ -60,7 +60,14 @@ object LedImageController extends HostActor with HostAware {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
     else if (windflowersHost) 280 //WindflowersPlacement.positions.length
-    else ReedsPlacement.positions.length //WindflowersPlacement.positions.length
+    else WindflowersPlacement.positions.length
+  }
+
+  val Layout: LedPlacement = {
+    if (apisHost) ApisPlacement
+    else if (reedsHost) ReedsPlacement
+    else if (windflowersHost) WindflowersPlacement
+    else WindflowersPlacement
   }
 
   val LedCountList = (0 to LedCount - 1).toList.map(_ * 3 + 4)
@@ -84,14 +91,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, TickInterval, self, FrameTick)
   val connectScheduler = context.system.scheduler.schedule (0 milliseconds, ConnectionTickInterval, self, ConnectionTick)
 
-  val layout: LedPlacement = {
-    if (apisHost) ApisPlacement
-    else if (reedsHost) ReedsPlacement
-    else if (windflowersHost) WindflowersPlacement
-    else ReedsPlacement //WindflowersPlacement
-  }
-
-  val pixelPositions: List[(Double, Double)] = layout.positions
+  val pixelPositions: List[(Double, Double)] = Layout.positions
 
   var horizontalPixelSpacing = 100
 
@@ -235,7 +235,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     if (currentImage != images(select.id)._1) {
       logger.warn("PatternSelect: " + select.id)
       currentImage = images(select.id)._1
-      horizontalPixelSpacing = currentImage.width / layout.layoutWidth
+      horizontalPixelSpacing = currentImage.width / Layout.layoutWidth
       globalCursor = (0, 0)
       assembledPixelData(LedCountList, globalCursor, lastFrame)
       assembledPixelData(LedCountList, globalCursor, currentFrame)
