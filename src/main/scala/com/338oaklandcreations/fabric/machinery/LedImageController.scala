@@ -45,10 +45,10 @@ object LedImageController extends HostActor with HostAware {
   val ConnectionTickInterval = 5 seconds
   val FrameRate = {
     if (reedsHost) 60
-    else if (windflowersHost) 20
-    else 20
+    else if (windflowersHost) 25
+    else 25
   }
-  val FrameDisplayRate = FrameRate * 10
+  val FrameDisplayRate = FrameRate * 100
   val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
 
   val SpeedModifier = 1
@@ -60,7 +60,7 @@ object LedImageController extends HostActor with HostAware {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
     else if (windflowersHost) 280 //WindflowersPlacement.positions.length
-    else WindflowersPlacement.positions.length
+    else ReedsPlacement.positions.length //WindflowersPlacement.positions.length
   }
 
   val LedCountList = (0 to LedCount - 1).toList.map(_ * 3 + 4)
@@ -88,7 +88,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     if (apisHost) ApisPlacement
     else if (reedsHost) ReedsPlacement
     else if (windflowersHost) WindflowersPlacement
-    else WindflowersPlacement
+    else ReedsPlacement //WindflowersPlacement
   }
 
   val pixelPositions: List[(Double, Double)] = layout.positions
@@ -276,8 +276,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
         connection ! Write(ByteString(currentFrame))
         if (frameCount % FrameDisplayRate == 0) {
-          logger.info(FrameDisplayRate + " Frames at " + "%1.3f".format((System.nanoTime / 1000000.0 - frameCountTimeMilliSeconds) / FrameDisplayRate) + " ms / frame")
-          logger.info("Frame build time " + "%1.3f".format(frameBuildTimeMilliSeconds / FrameDisplayRate) + " ms / frame")
+          logger.warn(FrameDisplayRate + " Frames at " + "%1.3f".format((System.nanoTime / 1000000.0 - frameCountTimeMilliSeconds) / FrameDisplayRate) + " ms / frame")
+          logger.warn("Frame build time " + "%1.3f".format(frameBuildTimeMilliSeconds / FrameDisplayRate) + " ms / frame")
           frameCount = 0
           frameCountTimeMilliSeconds = System.nanoTime / 1000000.0
           frameBuildTimeMilliSeconds = 0
