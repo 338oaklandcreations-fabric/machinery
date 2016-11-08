@@ -155,15 +155,17 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
       if (select.id == OffPatternId) {
-        logger.info("Off Selected")
-        val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
-        connection ! Write(bytes)
+        if (select.id != lastPatternSelect.patternNumber) {
+          logger.warn("Off Selected")
+          val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
+          connection ! Write(bytes)
+        }
       } else {
         logger.warn("PatternSelect: " + select.id)
-        lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
         val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
         connection ! Write(bytes)
       }
+      lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
     case LedControllerConnect(connect) =>
       logger.info("Receiving Connect Message")
       if (!connect) {
