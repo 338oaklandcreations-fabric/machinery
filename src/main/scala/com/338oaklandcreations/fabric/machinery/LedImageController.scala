@@ -23,7 +23,7 @@ import java.awt.image.BufferedImage
 import java.net.InetSocketAddress
 import javax.imageio.ImageIO
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor._
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
 import org.joda.time.DateTime
@@ -60,7 +60,7 @@ object LedImageController extends HostActor with HostAware {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
     else if (windflowersHost) 280 //WindflowersPlacement.positions.length
-    else WindflowersPlacement.positions.length
+    else 280 //WindflowersPlacement.positions.length
   }
 
   val Layout: LedPlacement = {

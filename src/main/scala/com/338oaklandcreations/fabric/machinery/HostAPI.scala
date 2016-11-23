@@ -28,6 +28,9 @@ import scala.concurrent.duration._
 import scala.sys.process._
 
 object HostAPI {
+
+  import MachineryController._
+
   case object HostTick
   case object WellLightTick
   case object TimeSeriesRequestCPU
@@ -42,7 +45,8 @@ object HostAPI {
   case class Settings(newTickInteval: Int, newHoursToTrack: Int)
   case class MetricHistory(history: List[Double])
   case class ConcerningMessages(logfile: String, warn: Int, error: Int, fatal: Int)
-  case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double], concerning: List[ConcerningMessages])
+  case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double],
+                            concerning: List[ConcerningMessages], timing: StartupShutDownTiming)
 
   val MonthDayTimeFormatter = DateTimeFormat.forPattern("MMMdd")
 }
@@ -50,6 +54,7 @@ object HostAPI {
 class HostAPI extends Actor with ActorLogging with HostActor {
 
   import HostAPI._
+  import MachineryController._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -63,6 +68,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
   var startTime: DateTime = null
+  var timing = StartupShutDownTiming(new DateTime, new DateTime)
   var wellLightSettings: WellLightSettings = null
   var currentWellLightSettings: WellLightSettings = null
   var tickInterval = 5 seconds
@@ -124,10 +130,12 @@ class HostAPI extends Actor with ActorLogging with HostActor {
     case TimeSeriesRequestCPU => context.sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => context.sender ! MetricHistory(memoryHistory.reverse)
     case HostStatisticsRequest =>
-      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse, concerningMessages)
+      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse, concerningMessages, timing)
     case LedPower(on) =>
       val pinValue = setGPIOpin(on, ledPowerPin)
       context.sender ! CommandResult(pinValue.toInt)
+    case updatedTiming: StartupShutDownTiming =>
+      timing = updatedTiming
     case WellLightSettings(power, level) =>
       val pinValue = {
         if (isArm) {

@@ -23,6 +23,8 @@ import ApisAPI.{BodyLightPattern, PooferPattern}
 import HostAPI._
 import LedController._
 import SunriseSunset._
+import IotAPI._
+import com._338oaklandcreations.fabric.machinery.MachineryController.StartupShutDownTiming
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat}
 import spray.json._
@@ -53,7 +55,8 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
   implicit val serverVersionJson = jsonFormat3(ServerVersion)
   implicit val metricHistoryJson = jsonFormat1(MetricHistory)
   implicit val concerningMessagesJson = jsonFormat4(ConcerningMessages)
-  implicit val hostStatisticsJson = jsonFormat4(HostStatistics)
+  implicit val startupShutdownTimingJson = jsonFormat2(StartupShutDownTiming)
+  implicit val hostStatisticsJson = jsonFormat5(HostStatistics)
   implicit val commandResultJson = jsonFormat1(CommandResult)
 
   implicit val heartbeatJson = jsonFormat11(Heartbeat)
@@ -68,5 +71,7 @@ object MachineryJsonProtocol extends DefaultJsonProtocol {
 
   implicit val sunriseSunsetResults = jsonFormat10(SunriseSunsetResults)
   implicit val sunriseSunsetResponse = jsonFormat2(SunriseSunsetResponse)
+  implicit val externalMessage = jsonFormat3(ExternalMessage)
+  implicit val externalMessagesJ = jsonFormat1(ExternalMessages)
 
 }

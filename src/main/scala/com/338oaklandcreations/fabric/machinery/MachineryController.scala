@@ -24,7 +24,8 @@ import java.net.InetSocketAddress
 import akka.actor._
 import akka.util.Timeout
 import com._338oaklandcreations.fabric.machinery.ApisAPI.{BodyLightPattern, PooferPattern}
-import com._338oaklandcreations.fabric.machinery.MachineryController.{ShutdownCheckTick, SleepCheckTick, SunTimingTick}
+import com._338oaklandcreations.fabric.machinery.MachineryController._
+import org.joda.time.{DateTimeZone, DateTime}
 import org.slf4j.LoggerFactory
 import spray.json._
 
@@ -35,6 +36,9 @@ object MachineryController {
   case object ShutdownCheckTick
   case object SleepCheckTick
   case object SunTimingTick
+  case object ExternalMessagesRequest
+
+  case class StartupShutDownTiming(startup: DateTime, shutdown: DateTime)
 
 }
 
@@ -60,11 +64,20 @@ class MachineryController extends Actor with ActorLogging {
   val sunriseSunsetAPI = actorOf(Props[SunriseSunset], "sunriseSunsetAPI")
   val iotAPI = actorOf(Props[IotAPI], "iotAPI")
 
+  var timing = StartupShutDownTiming(new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC))
+
+  var externalMessages: List[ExternalMessage] = List()
   var imageController = false
 
   val shutdownScheduler = context.system.scheduler.schedule (0 milliseconds, 10 minutes, self, ShutdownCheckTick)
   val tickScheduler = context.system.scheduler.schedule (1 minute, 5 seconds, self, SleepCheckTick)
   val sunTimingTick = context.system.scheduler.schedule (1 minute, 24 hours, self, SunTimingTick)
+  val SwitchoverTime = {
+    if (windflowersHost) 750
+    else 500
+
+  }
+
   val animations = new AnimationCycle
 
   override def preStart = {
@@ -77,9 +90,9 @@ class MachineryController extends Actor with ActorLogging {
         logger.info("Starting up image controller")
         imageController = true
         ledController ! LedControllerConnect(false)
-        Thread.sleep(500)
+        Thread.sleep(SwitchoverTime)
         ledImageController ! LedImageControllerConnect(true)
-        Thread.sleep(500)
+        Thread.sleep(SwitchoverTime)
       }
       ledImageController forward pattern
     } else {
@@ -87,9 +100,9 @@ class MachineryController extends Actor with ActorLogging {
         logger.info("Starting up led controller")
         imageController = false
         ledImageController ! LedImageControllerConnect(false)
-        Thread.sleep(500)
+        Thread.sleep(SwitchoverTime)
         ledController ! LedControllerConnect(true)
-        Thread.sleep(500)
+        Thread.sleep(SwitchoverTime)
       }
       ledController forward pattern
     }
@@ -97,15 +110,17 @@ class MachineryController extends Actor with ActorLogging {
 
   def receive = {
     case sunrise: SunriseSunsetResponse => {
-      iotAPI ! Message(SunTimingChannel, sunrise.toJson(MachineryJsonProtocol.sunriseSunsetResponse).toString)
-      animations.updateSunset(sunrise)
+      iotAPI ! ExternalMessage(SunTimingChannel, new DateTime, sunrise.toJson(MachineryJsonProtocol.sunriseSunsetResponse).toString)
+      timing = StartupShutDownTiming(sunrise.results.sunset.plusHours(-1).toDateTime(DateTimeZone.UTC), timing.shutdown)
+      animations.updateTiming(timing)
+      hostAPI ! timing
     }
     case SunTimingTick => sunriseSunsetAPI ! LagunaHills
     case ShutdownCheckTick =>
       if (animations.isShutdown) {
         val offPattern = PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
         self ! offPattern
-        iotAPI ! Message(PatternUpdateChannel, offPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
+        iotAPI ! ExternalMessage(PatternUpdateChannel, new DateTime, offPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
       }
     case SleepCheckTick =>
       if (!animations.isShutdown && animations.isSleeping) {
@@ -114,11 +129,16 @@ class MachineryController extends Actor with ActorLogging {
           animations.lastAnimationStartTime = System.currentTimeMillis
           val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
             currentPattern.speed.get, currentPattern.intensity.get)
-          iotAPI ! Message(PatternUpdateChannel, nextPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
+          iotAPI ! ExternalMessage(PatternUpdateChannel, new DateTime, nextPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
           logger.warn("Animation Select: " + nextPattern.id)
           setupController(nextPattern)
         }
       }
+    case message: ExternalMessage =>
+      logger.info("PubNub Message")
+      externalMessages = (message :: externalMessages).sortBy(_.timeStamp.getMillis).reverse.take (1000)
+    case ExternalMessagesRequest =>
+      context.sender ! ExternalMessages(externalMessages)
     case TimeSeriesRequestCPU =>
       logger.info("TimeSeriesRequestCPU")
       hostAPI forward TimeSeriesRequestCPU
@@ -130,7 +150,7 @@ class MachineryController extends Actor with ActorLogging {
       hostAPI forward HostStatisticsRequest
     case HeartbeatRequest =>
       logger.info("HeartbeatRequest")
-      Thread.sleep(500)
+      Thread.sleep(SwitchoverTime)
       if (imageController) {
         ledImageController forward HeartbeatRequest
       } else {

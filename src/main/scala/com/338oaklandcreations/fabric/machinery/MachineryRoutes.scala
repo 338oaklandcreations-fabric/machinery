@@ -47,7 +47,9 @@ trait MachineryRoutes extends HttpService with UserAuthentication with HostAware
   import HostAPI._
   import LedController._
   import MachineryJsonProtocol._
+  import MachineryController._
   import UserAuthentication._
+  import IotAPI._
   import spray.json._
 
   val system = ActorSystem("fabricSystem")
@@ -71,7 +73,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication with HostAware
       wellLightSettingsRequest ~
       logLevel ~
       bodyLightsRequest ~
-      pooferRequest
+      pooferRequest ~
+      externalMessages
 
   var staticPatternNames: String = ""
 
@@ -134,7 +137,6 @@ trait MachineryRoutes extends HttpService with UserAuthentication with HostAware
         future onComplete {
           case Success(success) => success match {
             case statistics: HostStatistics => {
-              println(statistics)
               ctx.complete(statistics.toJson.toString)
             }
             case _ => ctx.complete(400, UnknownCommandResponseString)
@@ -281,6 +283,22 @@ trait MachineryRoutes extends HttpService with UserAuthentication with HostAware
         val request = ctx.request.entity.data.asString.parseJson.convertTo[PooferPattern]
         controller ! request
         ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
+  def externalMessages = get {
+    path("externalMessages") {
+      respondWithMediaType(`application/json`) { ctx =>
+        val future = controller ? ExternalMessagesRequest
+        future onComplete {
+          case Success(success) => success match {
+            case messages: ExternalMessages => {
+              ctx.complete(messages.toJson.toString)
+            }
+            case _ => ctx.complete(400, UnknownCommandResponseString)
+          }
+          case Failure(failure) => ctx.complete(400, failure.toString)
+        }
       }
     }
   }

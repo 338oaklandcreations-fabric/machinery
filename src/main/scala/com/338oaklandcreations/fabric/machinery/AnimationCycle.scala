@@ -56,8 +56,6 @@ object AnimationCycle extends HostAware {
   val FS_ID_NARROW_FLAME = 1008
   val FS_ID_FLOWER_FLICKER = 1009
 
-  var shutdownTime = new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC)
-  var startupTime = new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC)
   val SleepThreshold = 1 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = {
@@ -138,23 +136,25 @@ class AnimationCycle extends HostAware {
 
   import AnimationCycle._
   import SunriseSunset._
+  import MachineryController._
 
   var currentStep = 0
   var nextTime = 0L
   var lastPatternSelectTime = System.currentTimeMillis
   var lastAnimationStartTime = 0L
   var sunriseSunsetResponse: SunriseSunsetResponse = null
+  var timing = StartupShutDownTiming(new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC))
 
-  def updateSunset(sunTiming: SunriseSunsetResponse) = {
-    startupTime = sunTiming.results.sunset.plusHours(-1).toDateTime(DateTimeZone.UTC)
+  def updateTiming(updatedTiming: StartupShutDownTiming) = {
+    timing = updatedTiming
   }
 
   def isShutdown: Boolean = {
     val current = new DateTime(DateTimeZone.UTC)
-    if (shutdownTime.getHourOfDay > startupTime.getHourOfDay) {
-      (current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < startupTime.getHourOfDay) && !developmentHost
+    if (timing.shutdown.getHourOfDay > timing.startup.getHourOfDay) {
+      (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < timing.startup.getHourOfDay) && !developmentHost
     } else {
-      (current.getHourOfDay >= shutdownTime.getHourOfDay || current.getHourOfDay < (startupTime.getHourOfDay - 24)) && !developmentHost
+      (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < (timing.startup.getHourOfDay - 24)) && !developmentHost
     }
   }
 

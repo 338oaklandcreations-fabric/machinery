@@ -17,22 +17,27 @@
 
 */
 
+
 package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{Actor, ActorLogging}
 import akka.util.Timeout
-import com._338oaklandcreations.fabric.machinery.IotAPI.Message
-import com.pubnub.api.callbacks.PNCallback
-import com.pubnub.api.models.consumer.{PNPublishResult, PNStatus}
+import com.pubnub.api.callbacks.{PNCallback, SubscribeCallback}
+import com.pubnub.api.enums._
+import com.pubnub.api.models.consumer._
+import com.pubnub.api.models.consumer.history.PNHistoryResult
+import com.pubnub.api.models.consumer.pubsub._
 import com.pubnub.api.{PNConfiguration, PubNub}
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
-import scala.util.Properties._
 import scala.concurrent.duration._
+import scala.util.Properties._
 
 object IotAPI {
 
-  case class Message(channel: String, payload: String)
+  case class ExternalMessage(channel: String, timeStamp: DateTime, payload: String)
+  case class ExternalMessages(messages: List[ExternalMessage])
 
   val SunTimingChannel = "sunTiming"
   val PatternUpdateChannel = "patternUpdate"
@@ -43,6 +48,8 @@ class IotAPI extends Actor with ActorLogging {
 
   implicit val defaultTimeout = Timeout(3 seconds)
 
+  import IotAPI._
+
   val logger =  LoggerFactory.getLogger(getClass)
 
   val pnConfiguration = new PNConfiguration()
@@ -52,9 +59,85 @@ class IotAPI extends Actor with ActorLogging {
 
   val pubnub = new PubNub(pnConfiguration)
 
+  pubnub.addListener(new SubscribeCallback() {
+
+    def status(pubnub: PubNub, status: PNStatus) = {
+      // the status object returned is always related to subscribe but could contain
+      // information about subscribe, heartbeat, or errors
+      // use the operationType to switch on different options
+      status.getOperation match {
+        // let's combine unsubscribe and subscribe handling for ease of use
+        case PNOperationType.PNSubscribeOperation =>
+        case PNOperationType.PNUnsubscribeOperation => {
+          // note: subscribe statuses never have traditional
+          // errors, they just have categories to represent the
+          // different issues or successes that occur as part of subscribe
+
+          status.getCategory match {
+            case PNStatusCategory.PNConnectedCategory =>
+            // this is expected for a subscribe, this means there is no error or issue whatsoever
+            case PNStatusCategory.PNReconnectedCategory =>
+            // this usually occurs if subscribe temporarily fails but reconnects. This means
+            // there was an error but there is no longer any issue
+            case PNStatusCategory.PNDisconnectedCategory =>
+            // this is the expected category for an unsubscribe. This means there
+            // was no error in unsubscribing from everythin
+            case PNStatusCategory.PNUnexpectedDisconnectCategory =>
+            // this is usually an issue with the internet connection, this is an error, handle appropriately
+            case PNStatusCategory.PNAccessDeniedCategory =>
+            // this means that PAM does allow this client to subscribe to this
+            // channel and channel group configuration. This is another explicit error
+            case _ =>
+            // More errors can be directly specified by creating explicit cases for other
+            // error categories of `PNStatusCategory` such as `PNTimeoutCategory` or `PNMalformedFilterExpressionCategory` or `PNDecryptionErrorCategory`
+          }
+        }
+        case PNOperationType.PNHeartbeatOperation =>
+          // heartbeat operations can in fact have errors, so it is important to check first for an error.
+          // For more information on how to configure heartbeat notifications through the status
+          // PNObjectEventListener callback, consult <link to the PNCONFIGURATION heartbeart config>
+          if (status.isError) {
+            // There was an error with the heartbeat operation, handle here
+          } else {
+            // heartbeat operation was successful
+          }
+        case _ =>
+        // Encountered unknown status type
+      }
+    }
+
+    def message(pubnub: PubNub, message: PNMessageResult) = {
+      logger.warn(message.getChannel + " - " + message.getMessage)
+      context.parent ! ExternalMessage(message.getChannel, new DateTime(message.getTimetoken / 10000000 * 1000), message.getMessage.toString)
+    }
+
+    def presence(pubnub: PubNub, presence: PNPresenceEventResult) {
+      // handle incoming presence data
+    }
+  })
+  pubnub.subscribe.channels(java.util.Arrays.asList(SunTimingChannel, PatternUpdateChannel)).execute
+
+  def getHistoryForChannel(channel: String) = {
+    pubnub.history
+      .channel(channel)
+      .count(100)
+      .includeTimetoken(true)
+      .async(new PNCallback[PNHistoryResult]() {
+      def onResponse(result: PNHistoryResult, status: PNStatus) = {
+        if (!status.isError) {
+          val messages = result.getMessages.iterator
+          while (messages.hasNext) {
+            val message = messages.next
+            context.parent ! ExternalMessage(channel, new DateTime(message.getTimetoken / 10000000 * 1000), message.getEntry.toString)
+          }
+        }
+      }
+    })
+  }
+
   def receive = {
-    case message: Message => {
-      pubnub.publish()
+    case message: ExternalMessage => {
+      pubnub.publish
         .message(message.payload)
         .channel(message.channel)
         .shouldStore(true)
@@ -67,4 +150,8 @@ class IotAPI extends Actor with ActorLogging {
     }
     case x => logger.info ("Unknown Command: " + x.toString())
   }
+
+  getHistoryForChannel(SunTimingChannel)
+  getHistoryForChannel(PatternUpdateChannel)
+
 }

@@ -100,7 +100,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       context.system.scheduler.scheduleOnce (10 seconds, self, PatternNamesRequest)
       context become connected(connection)
     case LedControllerVersionRequest =>
-      context.sender ! LedControllerVersion("<Unknown>", "<Unknown")
+      context.sender ! LedControllerVersion("<Unknown>", "<Unknown>")
     case LedControllerConnect(connect) =>
       enableConnect.connect = connect
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
@@ -155,7 +155,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
       if (select.id == OffPatternId) {
-        if (select.id != lastPatternSelect.patternNumber) {
+        if (select.id != lastPatternSelect.patternNumber.get) {
           logger.warn("Off Selected")
           val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
           connection ! Write(bytes)
