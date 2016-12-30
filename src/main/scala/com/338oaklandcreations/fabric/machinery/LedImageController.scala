@@ -19,7 +19,7 @@
 
 package com._338oaklandcreations.fabric.machinery
 
-import java.awt.image.BufferedImage
+import java.awt.image.DataBufferByte
 import java.net.InetSocketAddress
 import javax.imageio.ImageIO
 
@@ -28,6 +28,7 @@ import akka.io.{IO, Tcp}
 import akka.util.ByteString
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import sun.awt.image.ByteInterleavedRaster
 
 import scala.concurrent.duration._
 
@@ -39,14 +40,15 @@ object LedImageController extends HostActor with HostAware {
   case object ConnectionTick
 
   case class LedImageControllerConnect(var connect: Boolean)
-  case class Image(height: Int, width: Int, image: BufferedImage)
+  //case class Image(height: Int, width: Int, image: BufferedImage)
+  case class Image(height: Int, width: Int, pixelStride: Int, image: Array[Byte])
   case class Point(point: List[Double])
 
   val ConnectionTickInterval = 5 seconds
   val FrameRate = {
     if (reedsHost) 60
-    else if (windflowersHost) 15
-    else 15
+    else if (windflowersHost) 30
+    else 30
   }
   val FrameDisplayRate = FrameRate * 250
   val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
@@ -59,8 +61,8 @@ object LedImageController extends HostActor with HostAware {
   val LedCount = {
     if (apisHost) 101
     else if (reedsHost) ReedsPlacement.positions.length
-    else if (windflowersHost) 280 //WindflowersPlacement.positions.length
-    else 280 //WindflowersPlacement.positions.length
+    else if (windflowersHost) WindflowersPlacement.positions.length
+    else WindflowersPlacement.positions.length
   }
 
   val Layout: LedPlacement = {
@@ -117,7 +119,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
 
     def loadImage(filename: String, id: Int, name: String) = {
       val image = ImageIO.read(getClass.getResourceAsStream(filename))
-      images = images + (id -> (Image(image.getHeight, image.getWidth, image), name))
+      val imageBytes = image.getRaster.getDataBuffer.asInstanceOf[DataBufferByte].getData
+      images = images + (id -> (Image(image.getHeight, image.getWidth, image.getRaster.asInstanceOf[ByteInterleavedRaster].getPixelStride, imageBytes), name))
     }
 
     val imageList = List(
@@ -189,6 +192,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
       offsets.foreach({ x =>
         val position = pixelPositions((x - 4) / 3)
+        /*
         val pixel: Int = try {
           currentImage.image.getRGB(
             (position._1 * horizontalPixelSpacing).toInt.max(0).min(currentImage.width - 1),
@@ -196,20 +200,33 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         } catch {
           case _: Throwable => throw new IllegalArgumentException
         }
-
+        */
+        val byteIndex = {
+          val index = (position._1 * currentImage.pixelStride * horizontalPixelSpacing + (position._2 + cursor._2) * currentImage.pixelStride * currentImage.width).toInt.
+            max(0).min(currentImage.image.length - 1)
+          if (index >= currentImage.image.length - currentImage.pixelStride) {
+            currentImage.image.length - currentImage.pixelStride
+          } else {
+            if (currentImage.pixelStride == 4) index + 1
+            else index
+          }
+        }
         val lastRedByte = lastFrame(x)
         val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
-        val newRed = ((pixel >> 16 & 0xFF) * redFactor).min(255.0)
+        //val newRed = ((pixel >> 16 & 0xFF) * redFactor).min(255.0)
+        val newRed = (currentImage.image(byteIndex + 2) * redFactor).min(255.0)
         val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
 
         val lastGreenByte = lastFrame(x + 1)
         val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
-        val newGreen = ((pixel >> 8 & 0xFF) * greenFactor).min(255.0)
+        //val newGreen = ((pixel >> 8 & 0xFF) * greenFactor).min(255.0)
+        val newGreen = (currentImage.image(byteIndex + 1) * greenFactor).min(255.0)
         val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
 
         val lastBlueByte = lastFrame(x + 2)
         val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
-        val newBlue = ((pixel & 0xFF) * blueFactor).min(255.0)
+        //val newBlue = ((pixel & 0xFF) * blueFactor).min(255.0)
+        val newBlue = (currentImage.image(byteIndex) * blueFactor).min(255.0)
         val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
 
         if (apisHost || windflowersHost) {
