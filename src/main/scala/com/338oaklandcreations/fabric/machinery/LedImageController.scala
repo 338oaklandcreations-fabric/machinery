@@ -229,11 +229,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         val newBlue = (currentImage.image(byteIndex) * blueFactor).min(255.0)
         val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
 
-        if (apisHost || windflowersHost) {
+        if (apisHost || windflowersHost || fabric338Host) {
           frame(x) = blendedRed
           frame(x + 1) = blendedGreen
           frame(x + 2) = blendedBlue
-        } else if (reedsHost || fabric338Host) {
+        } else if (reedsHost) {
           frame(x) = blendedBlue
           frame(x + 1) = blendedRed
           frame(x + 2) = blendedGreen
