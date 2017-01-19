@@ -59,7 +59,7 @@ object AnimationCycle extends HostAware {
   val SleepThreshold = 1 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = {
-    if (reedsHost) {
+    if (reedsHost || fabric338Host) {
       List(
         // Pattern, speed, intensity, red, green, blue
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
@@ -72,7 +72,7 @@ object AnimationCycle extends HostAware {
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
         (15 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
       )
-    } else if (windflowersHost || fabric338Host) {
+    } else if (windflowersHost) {
       List(
         // Pattern, speed, intensity, red, green, blue
         (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon

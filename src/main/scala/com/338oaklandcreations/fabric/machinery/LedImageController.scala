@@ -46,8 +46,8 @@ object LedImageController extends HostActor with HostAware {
 
   val ConnectionTickInterval = 5 seconds
   val FrameRate = {
-    if (reedsHost) 60
-    else if (windflowersHost || fabric338Host) 30
+    if (reedsHost || fabric338Host) 60
+    else if (windflowersHost) 30
     else 30
   }
   val FrameDisplayRate = FrameRate * 250
@@ -60,15 +60,15 @@ object LedImageController extends HostActor with HostAware {
 
   val LedCount = {
     if (apisHost) 101
-    else if (reedsHost) ReedsPlacement.positions.length
-    else if (windflowersHost || fabric338Host) WindflowersPlacement.positions.length
+    else if (reedsHost || fabric338Host) ReedsPlacement.positions.length
+    else if (windflowersHost) WindflowersPlacement.positions.length
     else WindflowersPlacement.positions.length
   }
 
   val Layout: LedPlacement = {
     if (apisHost) ApisPlacement
-    else if (reedsHost) ReedsPlacement
-    else if (windflowersHost || fabric338Host) WindflowersPlacement
+    else if (reedsHost || fabric338Host) ReedsPlacement
+    else if (windflowersHost) WindflowersPlacement
     else WindflowersPlacement
   }
 
@@ -229,11 +229,11 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         val newBlue = (currentImage.image(byteIndex) * blueFactor).min(255.0)
         val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
 
-        if (apisHost || windflowersHost || fabric338Host) {
+        if (apisHost || windflowersHost) {
           frame(x) = blendedRed
           frame(x + 1) = blendedGreen
           frame(x + 2) = blendedBlue
-        } else if (reedsHost) {
+        } else if (reedsHost || fabric338Host) {
           frame(x) = blendedBlue
           frame(x + 1) = blendedRed
           frame(x + 2) = blendedGreen

@@ -73,7 +73,7 @@ class MachineryController extends Actor with ActorLogging {
   val tickScheduler = context.system.scheduler.schedule (1 minute, 5 seconds, self, SleepCheckTick)
   val sunTimingTick = context.system.scheduler.schedule (1 minute, 24 hours, self, SunTimingTick)
   val SwitchoverTime = {
-    if (windflowersHost || fabric338Host) 750
+    if (windflowersHost) 750
     else 500
 
   }
