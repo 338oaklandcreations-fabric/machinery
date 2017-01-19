@@ -29,7 +29,7 @@ trait HostAware {
 
   val hostname = {
     val name = envOrElse("HOSTNAME", "unknown")
-    logger.info("Hostname: " + name)
+    logger.warn("Hostname: " + name)
     name
   }
 
