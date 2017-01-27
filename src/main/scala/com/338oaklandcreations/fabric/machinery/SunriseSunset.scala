@@ -35,7 +35,7 @@ import scala.concurrent.duration._
 
 object SunriseSunset {
 
-  val CallTimeout = 5 seconds
+  val CallTimeout = 15 seconds
 
   val Rockridge = Location(37.850407,-122.2560957)
   val LagunaHills = Location(33.581079, -117.7346472)
