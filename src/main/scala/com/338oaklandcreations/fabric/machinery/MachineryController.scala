@@ -70,8 +70,8 @@ class MachineryController extends Actor with ActorLogging {
   var imageController = false
 
   val shutdownScheduler = context.system.scheduler.schedule (0 milliseconds, 10 minutes, self, ShutdownCheckTick)
-  val tickScheduler = context.system.scheduler.schedule (1 minute, 5 seconds, self, SleepCheckTick)
-  val sunTimingTick = context.system.scheduler.schedule (1 minute, 24 hours, self, SunTimingTick)
+  val tickScheduler = context.system.scheduler.schedule (10 seconds, 5 seconds, self, SleepCheckTick)
+  val sunTimingTick = context.system.scheduler.schedule (10 seconds, 24 hours, self, SunTimingTick)
   val SwitchoverTime = {
     if (windflowersHost) 750
     else 500
