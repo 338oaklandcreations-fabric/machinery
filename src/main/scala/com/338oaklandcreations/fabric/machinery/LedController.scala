@@ -106,7 +106,10 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
     case LedControllerTick =>
       if (enableConnect.connect) IO(Tcp) ! Connect(remote)
-    case _ => logger.warn("Not connected yet")
+    case PatternNamesRequest =>
+      if (context.sender != self) context.sender ! lastPatternNames
+    case unknownMessage =>
+      logger.warn("Not connected yet: " + print(unknownMessage))
   }
 
   def connected(connection: ActorRef): Receive = {

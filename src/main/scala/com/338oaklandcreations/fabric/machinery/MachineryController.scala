@@ -82,6 +82,7 @@ class MachineryController extends Actor with ActorLogging {
 
   override def preStart = {
     ledController ! LedControllerConnect(true)
+    ledController ! PatternNamesRequest
   }
 
   def setupController(pattern: PatternSelect) = {
