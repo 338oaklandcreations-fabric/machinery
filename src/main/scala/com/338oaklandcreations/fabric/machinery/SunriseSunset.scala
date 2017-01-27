@@ -35,7 +35,7 @@ import scala.concurrent.duration._
 
 object SunriseSunset {
 
-  val CallTimeout = 15 seconds
+  val CallTimeout = 5 seconds
 
   val Rockridge = Location(37.850407,-122.2560957)
   val LagunaHills = Location(33.581079, -117.7346472)
@@ -78,7 +78,7 @@ class SunriseSunset extends Actor with ActorLogging {
         currentTiming = response.parseJson.convertTo[SunriseSunsetResponse](MachineryJsonProtocol.sunriseSunsetResponse)
         logger.warn("Sun timing updated: " + currentTiming)
       } catch {
-        case x: Throwable => logger.error("Could not update sun timing")
+        case x: Throwable => logger.error("Could not update sun timing: " + x)
       }
       sender ! currentTiming
     case x => sender ! "UNKNOWN REQUEST TYPE: " + x.toString
