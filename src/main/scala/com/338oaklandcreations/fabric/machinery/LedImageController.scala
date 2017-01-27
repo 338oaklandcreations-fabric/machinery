@@ -60,14 +60,14 @@ object LedImageController extends HostActor with HostAware {
 
   val LedCount = {
     if (apisHost) 101
-    else if (reedsHost || fabric338Host) ReedsPlacement.positions.length
+    else if (reedsHost) ReedsPlacement.positions.length
     else if (windflowersHost) WindflowersPlacement.positions.length
     else WindflowersPlacement.positions.length
   }
 
   val Layout: LedPlacement = {
     if (apisHost) ApisPlacement
-    else if (reedsHost || fabric338Host) ReedsPlacement
+    else if (reedsHost) ReedsPlacement
     else if (windflowersHost) WindflowersPlacement
     else WindflowersPlacement
   }
@@ -179,6 +179,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   }
 
   def assembledPixelData(offsets: List[Int], cursor: (Int, Int), frame: Array[Byte]) = {
+    frame(0) = 0
+    frame(1) = 0
     frame(2) = (NumBytes >> 8).toByte
     frame(3) = NumBytes.toByte
     val startus = System.nanoTime
@@ -214,22 +216,22 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         val lastRedByte = lastFrame(x)
         val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
         //val newRed = ((pixel >> 16 & 0xFF) * redFactor).min(255.0)
-        val newRed = (currentImage.image(byteIndex + 2) * redFactor).min(255.0)
-        val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
+        val newRed = (currentImage.image(byteIndex + 2) * redFactor)
+        val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).min(255.0).max(0.0).toByte
 
         val lastGreenByte = lastFrame(x + 1)
         val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
         //val newGreen = ((pixel >> 8 & 0xFF) * greenFactor).min(255.0)
-        val newGreen = (currentImage.image(byteIndex + 1) * greenFactor).min(255.0)
-        val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
+        val newGreen = (currentImage.image(byteIndex + 1) * greenFactor)
+        val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).min(255.0).max(0.0).toByte
 
         val lastBlueByte = lastFrame(x + 2)
         val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
         //val newBlue = ((pixel & 0xFF) * blueFactor).min(255.0)
-        val newBlue = (currentImage.image(byteIndex) * blueFactor).min(255.0)
-        val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
+        val newBlue = (currentImage.image(byteIndex) * blueFactor)
+        val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).min(255.0).max(0.0).toByte
 
-        if (apisHost || windflowersHost || fabric338Host) {
+        if (apisHost || windflowersHost) {
           frame(x) = blendedRed
           frame(x + 1) = blendedGreen
           frame(x + 2) = blendedBlue
@@ -263,9 +265,9 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       lastPatternSelect = PatternSelect(select.id, 128, 128, 128, select.speed, select.intensity)
     } else {
       volume = lastPatternSelect.intensity.toFloat / 255.0
-      redFactor = (((select.red - 128.0) / 128.0 + 1.0) * volume).min(255.0)
-      greenFactor = (((select.green - 128.0) / 128.0 + 1.0) * volume).min(255.0)
-      blueFactor = (((select.blue - 128.0) / 128.0 + 1.0) * volume).min(255.0)
+      redFactor = (((select.red - 128.0) / 128.0 + 1.0) * volume).min(255.0).max(0.0)
+      greenFactor = (((select.green - 128.0) / 128.0 + 1.0) * volume).min(255.0).max(0.0)
+      blueFactor = (((select.blue - 128.0) / 128.0 + 1.0) * volume).min(255.0).max(0.0)
       lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
     }
   }

@@ -130,7 +130,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
         case Msg.PatternNames(pn) =>
           val names: List[String] = pn.name.toList.zipWithIndex.map({case (n, i) => if (n.isEmpty || (i + 1) == OffPatternId) "" else (i + 1).toString + "-" + n}) ++ LedImageController.PatternNames
           lastPatternNames = PatternNames(names.filter(!_.isEmpty))
-          logger.info (lastPatternNames.toString)
+          logger.warn (lastPatternNames.toString)
         case Msg.Welcome(welcome) =>
           val date =
             try {
@@ -180,7 +180,6 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
       lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
-      lastPatternNames = PatternNames(List())
       context.parent ! NodeConnectionClosed
       context become receive
     case c @ Connected(remote, local) =>
