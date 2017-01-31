@@ -192,17 +192,27 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       })
     } else {
       val blendingFactor = (1.0 - blending.toDouble / baseBlending.toDouble)
+
+      var lastRedByte = 0
+      var lastRed = 0
+      var imageRed = 0
+      var newRed = 0.0
+      var blendedRed: Byte = 0
+
+      var lastGreenByte = 0
+      var lastGreen = 0
+      var imageGreen = 0
+      var newGreen = 0.0
+      var blendedGreen: Byte = 0
+
+      var lastBlueByte = 0
+      var lastBlue = 0
+      var imageBlue = 0
+      var newBlue = 0.0
+      var blendedBlue: Byte = 0
+
       offsets.foreach({ x =>
         val position = pixelPositions((x - 4) / 3)
-        /*
-        val pixel: Int = try {
-          currentImage.image.getRGB(
-            (position._1 * horizontalPixelSpacing).toInt.max(0).min(currentImage.width - 1),
-            (position._2 + cursor._2).toInt.max(0).min(currentImage.height - 1))
-        } catch {
-          case _: Throwable => throw new IllegalArgumentException
-        }
-        */
         val byteIndex = {
           val index = (position._1 * currentImage.pixelStride * horizontalPixelSpacing + (position._2 + cursor._2) * currentImage.pixelStride * currentImage.width).toInt.
             max(0).min(currentImage.image.length - 1)
@@ -213,23 +223,33 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
             else index
           }
         }
-        val lastRedByte = lastFrame(x)
-        val lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
-        //val newRed = ((pixel >> 16 & 0xFF) * redFactor).min(255.0)
-        val newRed = (currentImage.image(byteIndex + 2) * redFactor)
-        val blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).min(255.0).max(0.0).toByte
+        if ((x - 4) / 3 == 0) {
+          //logger.warn(imageRed + ":" + imageGreen + ":" + imageBlue + " -> " + blendedRed + ":" + blendedGreen + ":" + blendedBlue)
+        }
+        lastRedByte = lastFrame(x)
+        lastRed = if (lastRedByte < 0) lastRedByte + 255 else lastRedByte
+        imageRed = currentImage.image(byteIndex + 2)
+        imageRed = if (imageRed < 0) imageRed + 255 else imageRed
+        newRed = imageRed * redFactor
+        blendedRed = (lastRed + (newRed - lastRed) * blendingFactor).toByte
 
-        val lastGreenByte = lastFrame(x + 1)
-        val lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
-        //val newGreen = ((pixel >> 8 & 0xFF) * greenFactor).min(255.0)
-        val newGreen = (currentImage.image(byteIndex + 1) * greenFactor)
-        val blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).min(255.0).max(0.0).toByte
+        lastGreenByte = lastFrame(x + 1)
+        lastGreen = if (lastGreenByte < 0) lastGreenByte + 255 else lastGreenByte
+        imageGreen = currentImage.image(byteIndex + 1)
+        imageGreen = if (imageGreen < 0) imageGreen + 255 else imageGreen
+        newGreen = imageGreen * greenFactor
+        blendedGreen = (lastGreen + (newGreen - lastGreen) * blendingFactor).toByte
 
-        val lastBlueByte = lastFrame(x + 2)
-        val lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
-        //val newBlue = ((pixel & 0xFF) * blueFactor).min(255.0)
-        val newBlue = (currentImage.image(byteIndex) * blueFactor)
-        val blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).min(255.0).max(0.0).toByte
+        lastBlueByte = lastFrame(x + 2)
+        lastBlue = if (lastBlueByte < 0) lastBlueByte + 255 else lastBlueByte
+        imageBlue = currentImage.image(byteIndex)
+        imageBlue = if (imageBlue < 0) imageBlue + 255 else imageBlue
+        newBlue = imageBlue * blueFactor
+        blendedBlue = (lastBlue + (newBlue - lastBlue) * blendingFactor).toByte
+
+        if ((x - 4) / 3 == 0) {
+//          logger.warn(imageRed + ":" + imageGreen + ":" + imageBlue + " -> " + blendedRed + ":" + blendedGreen + ":" + blendedBlue)
+        }
 
         if (apisHost || windflowersHost) {
           frame(x) = blendedRed
@@ -258,17 +278,17 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       globalCursor = (0, 0)
       assembledPixelData(LedCountList, globalCursor, lastFrame)
       assembledPixelData(LedCountList, globalCursor, currentFrame)
+      lastPatternSelect = PatternSelect(select.id, 128, 128, 128, select.speed, select.intensity)
       volume = lastPatternSelect.intensity.toFloat / 255.0
       redFactor = lastPatternSelect.intensity.toFloat / 255.0
       greenFactor = lastPatternSelect.intensity.toFloat / 255.0
       blueFactor = lastPatternSelect.intensity.toFloat / 255.0
-      lastPatternSelect = PatternSelect(select.id, 128, 128, 128, select.speed, select.intensity)
     } else {
+      lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
       volume = lastPatternSelect.intensity.toFloat / 255.0
       redFactor = (((select.red - 128.0) / 128.0 + 1.0) * volume).min(255.0).max(0.0)
       greenFactor = (((select.green - 128.0) / 128.0 + 1.0) * volume).min(255.0).max(0.0)
       blueFactor = (((select.blue - 128.0) / 128.0 + 1.0) * volume).min(255.0).max(0.0)
-      lastPatternSelect = PatternSelect(select.id, select.red, select.green, select.blue, select.speed, select.intensity)
     }
   }
 
