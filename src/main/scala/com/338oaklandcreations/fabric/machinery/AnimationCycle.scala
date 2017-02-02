@@ -21,8 +21,9 @@ package com._338oaklandcreations.fabric.machinery
 
 import com._338oaklandcreations.fabric.machinery.FabricProtos.PatternCommand
 import org.joda.time.{DateTimeZone, DateTime}
+import HostAware._
 
-object AnimationCycle extends HostAware {
+object AnimationCycle {
 
   val FS_ID_FULL_COLOR = 0x03
   val FS_ID_SPARKLE = 0x04
@@ -60,7 +61,7 @@ object AnimationCycle extends HostAware {
 
   val Steps: List[(Long, PatternCommand)] = {
     if (reedsHost) {
-      logger.info("Loading reeds animation cycle")
+      logger.warn("Loading reeds animation cycle")
       List(
         // Pattern, speed, intensity, red, green, blue
         (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
@@ -74,7 +75,7 @@ object AnimationCycle extends HostAware {
         (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
       )
     } else if (windflowersHost) {
-      logger.info("Loading windflowers animation cycle")
+      logger.warn("Loading windflowers animation cycle")
       List(
         // Pattern, speed, intensity, red, green, blue
         (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
@@ -94,7 +95,7 @@ object AnimationCycle extends HostAware {
         (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
       )
     } else {
-      logger.info("Loading generic animation cycle")
+      logger.warn("Loading generic animation cycle")
       List(
         // Pattern, speed, intensity, red, green, blue
         (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
@@ -135,7 +136,7 @@ object AnimationCycle extends HostAware {
   }
 }
 
-class AnimationCycle extends HostAware {
+class AnimationCycle {
 
   import AnimationCycle._
   import SunriseSunset._

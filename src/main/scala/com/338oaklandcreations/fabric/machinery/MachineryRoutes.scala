@@ -29,6 +29,8 @@ import spray.routing._
 
 import scala.util.{Failure, Success}
 
+import HostAware._
+
 class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
 
   override def actorRefFactory = context
@@ -41,7 +43,7 @@ class MachineryRoutesServiceActor extends HttpServiceActor with ActorLogging {
 
 }
 
-trait MachineryRoutes extends HttpService with UserAuthentication with HostAware {
+trait MachineryRoutes extends HttpService with UserAuthentication {
 
   import ApisAPI._
   import HostAPI._

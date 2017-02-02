@@ -32,7 +32,9 @@ import sun.awt.image.ByteInterleavedRaster
 
 import scala.concurrent.duration._
 
-object LedImageController extends HostActor with HostAware {
+import HostAware._
+
+object LedImageController extends HostActor {
 
   def props(remote: InetSocketAddress) = Props(classOf[LedImageController], remote)
 

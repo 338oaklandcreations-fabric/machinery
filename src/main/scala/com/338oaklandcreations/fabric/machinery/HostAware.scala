@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Properties._
 
-trait HostAware {
+object HostAware {
 
   val logger = LoggerFactory.getLogger(getClass)
 

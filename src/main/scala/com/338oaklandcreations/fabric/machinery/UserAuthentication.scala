@@ -20,7 +20,7 @@
 package com._338oaklandcreations.fabric.machinery
 
 import akka.util.Timeout
-import org.slf4j.Logger
+import org.slf4j.{Logger, LoggerFactory}
 import spray.routing._
 import spray.routing.authentication._
 
@@ -43,7 +43,7 @@ trait UserAuthentication {
 
   implicit val defaultTimeout = Timeout(3 seconds)
 
-  val logger: Logger
+  val logger: Logger = LoggerFactory.getLogger(getClass)
 
   def authentications = {
     val userPWD = envOrElse("FABRIC_USER_PASSWORDS", "mauricio,2015")

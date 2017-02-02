@@ -25,6 +25,8 @@ import akka.actor._
 import akka.util.Timeout
 import com._338oaklandcreations.fabric.machinery.ApisAPI.{BodyLightPattern, PooferPattern}
 import com._338oaklandcreations.fabric.machinery.MachineryController._
+import HostAware._
+
 import org.joda.time.{DateTimeZone, DateTime}
 import org.slf4j.LoggerFactory
 import spray.json._
