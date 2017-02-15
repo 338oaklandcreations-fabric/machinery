@@ -52,7 +52,7 @@ object LedImageController extends HostActor {
     else if (windflowersHost) 30
     else 30
   }
-  val FrameDisplayRate = FrameRate * 250
+  val FrameDisplayRate = FrameRate //* 250
   val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
 
   val SpeedModifier = 1
@@ -216,10 +216,13 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       offsets.foreach({ x =>
         val position = pixelPositions((x - 4) / 3)
         val byteIndex = {
-          val index = (position._1 * currentImage.pixelStride * horizontalPixelSpacing + (position._2 + cursor._2) * currentImage.pixelStride * currentImage.width).toInt.
-            max(0).min(currentImage.image.length - 1)
+          val index =
+            (position._1 * currentImage.pixelStride * horizontalPixelSpacing +
+            (position._2 + cursor._2) *
+            currentImage.pixelStride * currentImage.width).toInt.max(0).min(currentImage.image.length - 1)
           if (index >= currentImage.image.length - currentImage.pixelStride) {
-            currentImage.image.length - currentImage.pixelStride
+            if (currentImage.pixelStride == 4) currentImage.image.length - currentImage.pixelStride * 2 + 1
+            else currentImage.image.length - currentImage.pixelStride * 2
           } else {
             if (currentImage.pixelStride == 4) index + 1
             else index
@@ -315,7 +318,6 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
         assembledPixelData(LedCountList, globalCursor, currentFrame)
         blending -= 1
 
-        connection ! Write(ByteString(currentFrame))
         if (frameCount % FrameDisplayRate == 0) {
           logger.warn(FrameDisplayRate + " Frames at " + "%1.3f".format((System.nanoTime / 1000000.0 - frameCountTimeMilliSeconds) / FrameDisplayRate) + " ms / frame")
           logger.warn("Frame build time " + "%1.3f".format(frameBuildTimeMilliSeconds / FrameDisplayRate) + " ms / frame")
@@ -323,6 +325,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
           frameCountTimeMilliSeconds = System.nanoTime / 1000000.0
           frameBuildTimeMilliSeconds = 0
         }
+
+        connection ! Write(ByteString(currentFrame))
       }
     case select: PatternSelect =>
       selectImage(select)
