@@ -342,8 +342,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       }
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
-      (1 to lastFrame.length).foreach(lastFrame(_) = 0)
-      (1 to currentFrame.length).foreach(currentFrame(_) = 0)
+      (0 to lastFrame.length - 1).foreach(lastFrame(_) = 0)
+      (0 to currentFrame.length - 1).foreach(currentFrame(_) = 0)
       context become receive
   }
 
