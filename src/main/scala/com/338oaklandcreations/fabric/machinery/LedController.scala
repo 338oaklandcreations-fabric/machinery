@@ -165,7 +165,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
         }
       } else {
         if (PatternNameMap.contains(select.id))
-          logger.warn("PatternSelect: " + select.id)
+          logger.warn("PatternSelect: " + select.id + " - " + AnimationCycle.PatternNameMap(select.id))
         else
           logger.warn("PatternSelect: " + select.id + " - <unknown pattern id>")
         lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
