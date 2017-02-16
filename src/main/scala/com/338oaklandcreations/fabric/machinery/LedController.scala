@@ -30,6 +30,8 @@ import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 
+import AnimationCycle._
+
 import scala.concurrent.duration._
 
 object LedController {
@@ -55,10 +57,7 @@ object LedController {
   val MessageHeartbeatRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_HEARTBEAT))).toByteArray)
   val MessagePatternNamesRequest = ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_PATTERN_NAMES))).toByteArray)
 
-  val OffPatternId = 6
-  val FullColorPatternId = 3
-
-  val OffCommand = PatternCommand(Some(OffPatternId), Some(0), Some(0), Some(0), Some(0), Some(0))
+  val OffCommand = PatternCommand(Some(FS_ID_OFF), Some(0), Some(0), Some(0), Some(0), Some(0))
 
   val HeartbeatLength = 11
   val HeartbeatPatternNameLength = 11
@@ -81,7 +80,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
   var lastHeartbeat = Heartbeat(new DateTime, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
   var lastPatternNames = PatternNames(List())
   var ledControllerVersion = LedControllerVersion("", "")
-  var lastPatternSelect = PatternCommand(Some(3), Some(150), Some(0), Some(255), Some(150), Some(150))
+  var lastPatternSelect = PatternCommand(Some(FS_ID_FULL_COLOR), Some(150), Some(0), Some(255), Some(150), Some(150))
 
   val enableConnect = LedControllerConnect(false)
   val tickInterval = 5 seconds
@@ -96,7 +95,7 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       val connection = sender
       connection ! Register(self)
       connection ! Write(ByteString(FabricWrapperMessage.defaultInstance.withCommand(CommandMessage(Some(CommandMessage.CommandList.PROTOBUF_OPC_CONNECT))).toByteArray))
-      connection ! lastPatternSelect
+      //connection ! lastPatternSelect
       context.system.scheduler.scheduleOnce (10 seconds, self, PatternNamesRequest)
       context become connected(connection)
     case LedControllerVersionRequest =>
@@ -157,18 +156,22 @@ class LedController(remote: InetSocketAddress) extends Actor with ActorLogging {
       }
       if (context.sender != self) context.sender ! lastPatternNames
     case select: PatternSelect =>
-      if (select.id == OffPatternId) {
+      if (select.id == FS_ID_OFF) {
         if (select.id != lastPatternSelect.patternNumber.get) {
           logger.warn("Off Selected")
+          lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
           val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(OffCommand).toByteArray)
           connection ! Write(bytes)
         }
       } else {
-        logger.warn("PatternSelect: " + select.id)
+        if (PatternNameMap.contains(select.id))
+          logger.warn("PatternSelect: " + select.id)
+        else
+          logger.warn("PatternSelect: " + select.id + " - <unknown pattern id>")
+        lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
         val bytes = ByteString(FabricWrapperMessage.defaultInstance.withPatternCommand(lastPatternSelect).toByteArray)
         connection ! Write(bytes)
       }
-      lastPatternSelect = PatternCommand(Some(select.id), Some(select.speed), Some(select.intensity), Some(select.red), Some(select.green), Some(select.blue))
     case LedControllerConnect(connect) =>
       logger.info("Receiving Connect Message")
       if (!connect) {

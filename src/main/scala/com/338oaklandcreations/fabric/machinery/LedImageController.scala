@@ -52,7 +52,7 @@ object LedImageController extends HostActor {
     else if (windflowersHost) 30
     else 30
   }
-  val FrameDisplayRate = FrameRate //* 250
+  val FrameDisplayRate = FrameRate * 250
   val TickInterval = ((1.0 / FrameRate) * 1000) milliseconds
 
   val SpeedModifier = 1
@@ -342,6 +342,8 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
       }
     case _: ConnectionClosed =>
       logger.info("Connection Closed")
+      (1 to lastFrame.length).foreach(lastFrame(_) = 0)
+      (1 to currentFrame.length).foreach(currentFrame(_) = 0)
       context become receive
   }
 

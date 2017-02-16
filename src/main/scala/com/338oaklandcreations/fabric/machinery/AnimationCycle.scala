@@ -60,6 +60,38 @@ object AnimationCycle {
   val FS_ID_NARROW_FLAME = 1008
   val FS_ID_FLOWER_FLICKER = 1009
 
+  val PatternNameMap = Map((0x03 -> "FS_ID_FULL_COLOR"),
+    (0x04 -> "FS_ID_SPARKLE"),
+    (0x05 -> "FS_ID_DESCEND"),
+    (0x06 -> "FS_ID_OFF"),
+    (0x07 -> "FS_ID_FLASH"),
+    (0x09 -> "FS_ID_HEART"),
+    (0x0a -> "FS_ID_BREATHE"),
+    (0x0b -> "FS_ID_ORGANIC"),
+    (0x0c -> "FS_ID_CYLON"),
+    (0x0d -> "FS_ID_DROP"),
+    (0x0e -> "FS_ID_CHARACTER"),
+    (0x0f -> "FS_ID_CYLON_VERTICAL"),
+    (0x10 -> "FS_ID_CYLON_PONG"),
+    (0x11 -> "FS_ID_BREATHE_EVOLVE"),
+    (0x16 -> "FS_ID_PRISM"),
+    (0x18 -> "FS_ID_MATRIX"),
+    (0x19 -> "FS_ID_RAINBOW_CHASE"),
+    (0x1a -> "FS_ID_RANDOM_FLASH"),
+    (0x1c -> "FS_ID_STARFIELD"),
+    (0x25 -> "FS_ID_FOREST_RUN"),
+
+    (1000 -> "FS_ID_FLAMES_IMAGE"),
+    (1001 -> "FS_ID_SEAHORSE_IMAGE"),
+    (1002 -> "FS_ID_SPARKLE_IMAGE"),
+    (1003 -> "FS_ID_UNDERWATER_IMAGE"),
+    (1004 -> "FS_ID_BLUE_WAVE_IMAGE"),
+    (1005 -> "FS_ID_GOLD_BUBBLES_IMAGE"),
+    (1006 -> "FS_ID_GRAPE_SUNSET_IMAGE"),
+    (1007 -> "FS_ID_PURPLE_BUBBLES_IMAGE"),
+    (1008 -> "FS_ID_NARROW_FLAME"),
+    (1009 -> "FS_ID_FLOWER_FLICKER"))
+
   val SleepThreshold = 1 * 60 * 1000
 
   val Steps: List[(Long, PatternCommand)] = {

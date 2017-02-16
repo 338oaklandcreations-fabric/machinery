@@ -72,7 +72,7 @@ class MachineryController extends Actor with ActorLogging {
   var imageController = false
 
   val shutdownScheduler = context.system.scheduler.schedule (0 milliseconds, 10 minutes, self, ShutdownCheckTick)
-  val tickScheduler = context.system.scheduler.schedule (10 seconds, 2 seconds, self, SleepCheckTick)
+  val tickScheduler = context.system.scheduler.schedule (10 seconds, 5 seconds, self, SleepCheckTick)
   val sunTimingTick = context.system.scheduler.schedule (10 seconds, 24 hours, self, SunTimingTick)
   val SwitchoverTime = {
     if (!windflowersHost) 500
@@ -121,7 +121,7 @@ class MachineryController extends Actor with ActorLogging {
     case SunTimingTick => sunriseSunsetAPI ! LagunaHills
     case ShutdownCheckTick =>
       if (animations.isShutdown) {
-        val offPattern = PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
+        val offPattern = PatternSelect(AnimationCycle.FS_ID_OFF, 0, 0, 0, 0, 0)
         self ! offPattern
         iotAPI ! ExternalMessage(PatternUpdateChannel, new DateTime, offPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
       }
@@ -133,7 +133,10 @@ class MachineryController extends Actor with ActorLogging {
           val nextPattern = PatternSelect(currentPattern.patternNumber.get, currentPattern.red.get, currentPattern.green.get, currentPattern.blue.get,
             currentPattern.speed.get, currentPattern.intensity.get)
           iotAPI ! ExternalMessage(PatternUpdateChannel, new DateTime, nextPattern.toJson(MachineryJsonProtocol.patternSelectJson).toString)
-          logger.warn("Animation Select: " + nextPattern.id)
+          if (AnimationCycle.PatternNameMap.contains(nextPattern.id))
+            logger.warn("Animation Select: " + nextPattern.id + " - " + AnimationCycle.PatternNameMap(nextPattern.id))
+          else
+            logger.warn("Animation Select: " + nextPattern.id + " - <unknown pattern id>")
           setupController(nextPattern)
         }
       }
