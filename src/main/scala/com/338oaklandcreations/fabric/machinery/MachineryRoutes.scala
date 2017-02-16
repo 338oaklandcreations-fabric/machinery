@@ -158,8 +158,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
   def ledPower = post {
     path("ledPower" / """(on|off)""".r) { (select) =>
       respondWithMediaType(`application/json`) { ctx =>
-        if (select == "off") controller ! PatternSelect(LedController.OffPatternId, 0, 0, 0, 0, 0)
-        else controller ! PatternSelect(-LedController.OffPatternId, 0, 0, 0, 0, 0)
+        if (select == "off") controller ! PatternSelect(AnimationCycle.FS_ID_OFF, 0, 0, 0, 0, 0)
+        else controller ! PatternSelect(-AnimationCycle.FS_ID_OFF, 0, 0, 0, 0, 0)
         val future = controller ? LedPower(select == "on")
         future onComplete {
           case Success(success) => success match {
