@@ -277,7 +277,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
   def selectImage(select: PatternSelect) = {
     frameCount = 0
     if (currentImage != images(select.id)._1) {
-      logger.warn("PatternSelect: " + select.id)
+      logger.warn("PatternSelect: " + select.id + " - " + AnimationCycle.PatternNameMap(select.id)))
       currentImage = images(select.id)._1
       horizontalPixelSpacing = currentImage.width / Layout.layoutWidth
       globalCursor = (0, 0)
