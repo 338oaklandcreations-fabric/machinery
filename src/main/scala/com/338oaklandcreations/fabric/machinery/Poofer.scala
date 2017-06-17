@@ -131,7 +131,7 @@ class Poofer extends HostActor with TickManager {
     setGPIOpin(false, LeftPooferPin)
   }
 
-  setupGPIO(RightPooferPin, 0)
-  setupGPIO(LeftPooferPin, 0)
+  setupGPIO(RightPooferPin, "out", 0)
+  setupGPIO(LeftPooferPin, "out", 0)
 
 }

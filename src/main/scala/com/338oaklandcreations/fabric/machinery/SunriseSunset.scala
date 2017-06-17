@@ -41,7 +41,7 @@ object SunriseSunset {
   val LagunaHills = Location(33.581079, -117.7346472)
 
   case class Location(latitude: Double, longitude: Double)
-  case class SunriseSunsetResults(sunrise: DateTime, sunset: DateTime, solar_noon: DateTime, day_length: Int,
+  case class SunriseSunsetResults(sunrise: org.joda.time.DateTime, sunset: DateTime, solar_noon: DateTime, day_length: Int,
                                   civil_twilight_begin: DateTime, civil_twilight_end: DateTime,
                                   nautical_twilight_begin: DateTime, nautical_twilight_end: DateTime,
                                   astronomical_twilight_begin: DateTime, astronomical_twilight_end: DateTime)
@@ -76,11 +76,11 @@ class SunriseSunset extends Actor with ActorLogging {
         val request = HttpRequest(HttpMethods.GET, uri(location))
         val response: String = Await.result ((hostConnector ? request).mapTo[HttpResponse], CallTimeout) ~> unmarshal[String]
         currentTiming = response.parseJson.convertTo[SunriseSunsetResponse](MachineryJsonProtocol.sunriseSunsetResponse)
+        sender ! currentTiming
         logger.warn("Sun timing updated: " + currentTiming)
       } catch {
         case x: Throwable => logger.error("Could not update sun timing: " + x)
       }
-      sender ! currentTiming
     case x => sender ! "UNKNOWN REQUEST TYPE: " + x.toString
   }
 

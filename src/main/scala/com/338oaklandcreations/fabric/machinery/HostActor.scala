@@ -32,12 +32,12 @@ trait HostActor {
 
   def pinFilename(pin: String) = "/sys/class/gpio/gpio" + pin
 
-  def setupGPIO(pin: String, initialValue: Int)(implicit logger: Logger) = {
+  def setupGPIO(pin: String, direction: String, initialValue: Int)(implicit logger: Logger) = {
     if (isArm) {
       val enableCommand = "sudo sh -c \"echo " + pin + " > /sys/class/gpio/export\""
       logger.info("Enable ledPower pin...")
       Process(Seq("bash", "-c", enableCommand)).!
-      val directionCommand = "sudo sh -c \"echo out > " + pinFilename(pin) + "/direction\""
+      val directionCommand = "sudo sh -c \"echo " + direction + " > " + pinFilename(pin) + "/direction\""
       logger.info("Direction for ledPower pin...")
       Process(Seq("bash", "-c", directionCommand)).!
       val valueCommand = "sudo sh -c \"echo " + initialValue + " > "+ pinFilename(pin) + "/value\""
@@ -54,6 +54,13 @@ trait HostActor {
       val setPinResult = Process("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
       setPinResult
     } else if (pinValue) "1" else "0"
+  }
+
+  def getGPIOpin(pin: String): Int = {
+    if (isArm) {
+      val setPinResult = Process("cat " + pinFilename(pin) + "/value").!!.replaceAll("\n", "")
+      setPinResult.toInt
+    } else 0
   }
 
   def setPWMperiod(period: Int, device: String)(implicit logger: Logger) = {

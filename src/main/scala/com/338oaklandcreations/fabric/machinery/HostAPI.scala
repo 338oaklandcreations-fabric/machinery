@@ -20,7 +20,7 @@
 package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
 
@@ -67,8 +67,9 @@ class HostAPI extends Actor with ActorLogging with HostActor {
 
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
+  var dataReturnHistory: List[Int] = List()
   var startTime: DateTime = null
-  var timing = StartupShutDownTiming(new DateTime, new DateTime)
+  var timing = StartupShutDownTiming(new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC))
   var wellLightSettings: WellLightSettings = null
   var currentWellLightSettings: WellLightSettings = null
   var tickInterval = 5 seconds
@@ -78,6 +79,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   val wellLightTickInterval = 2 milliseconds
   var wellLightTickScheduler: Cancellable = null
   val ledPowerPin = "48"
+  val dataReturnPin = "60"
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
 
   def setupPWM = {
@@ -89,7 +91,9 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   override def preStart(): Unit = {
     logger.info("Starting HostAPI...")
     logger.info("Starting GPIO for ledPower control...")
-    setupGPIO(ledPowerPin, 1)
+    setupGPIO(ledPowerPin, "out", 1)
+    logger.info("Starting GPIO for ledPowerPin control...")
+    setupGPIO(dataReturnPin, "in", 0)
     logger.info("Starting PWM for wellLight control...")
     setupPWM
     wellLightSettings = WellLightSettings(false, 128)
@@ -201,6 +205,11 @@ class HostAPI extends Actor with ActorLogging with HostActor {
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (currentCpu :: cpuHistory).take (takeCount)
       memoryHistory = (currentMemory :: memoryHistory).take (takeCount)
+      dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (50)
+      if (dataReturnHistory.exists(_ != dataReturnHistory.head)) {
+        logger.info ("No change in dataReturnHistory")
+      }
+
     }
     case x => logger.info ("Unknown Command: " + x.toString())
   }
