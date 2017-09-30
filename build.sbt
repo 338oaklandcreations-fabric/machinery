@@ -19,6 +19,12 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 resolvers += "Spray" at "http://repo.spray.io"
 
+mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) => {
+  case ".DS_Store" => MergeStrategy.discard
+  case x => old(x)
+}
+}
+
 lazy val root = (project in file(".")).
   enablePlugins(BuildInfoPlugin).
   settings(
