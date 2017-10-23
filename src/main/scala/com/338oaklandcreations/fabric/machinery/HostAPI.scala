@@ -206,8 +206,8 @@ class HostAPI extends Actor with ActorLogging with HostActor {
       cpuHistory = (currentCpu :: cpuHistory).take (takeCount)
       memoryHistory = (currentMemory :: memoryHistory).take (takeCount)
       dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (50)
-      if (dataReturnHistory.exists(_ != dataReturnHistory.head)) {
-        logger.info ("No change in dataReturnHistory")
+      if (!dataReturnHistory.exists(_ != dataReturnHistory.head)) {
+        logger.warn ("No change in dataReturnHistory")
       }
 
     }
