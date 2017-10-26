@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+option java_package = "com._338oaklandcreations.fabric.machinery";
+option java_outer_classname = "FabricProtos";
+
+message FabricWrapperMessage {
+	oneof msg {
+	    HeartbeatMessage heartbeat = 1;
+	        PatternNamesMessage patternNames = 2;
+		    CommandMessage command = 3;
+		        WelcomeMessage welcome = 4;
+			    PatternCommand patternCommand = 5;
+			    }
+}
+
+message HeartbeatMessage {
+  int32 messageTypeID = 1;
+  int32 versionID = 2;
+  int32 currentPattern = 3;
+  int32 red = 4;
+  int32 green = 5;
+  int32 blue = 6;
+  int32 speed = 7;
+  int32 intensity = 8;
+  int32 memberType = 9;
+  string currentPatternName = 10;
+
+  enum MemberType {
+    PROTOBUF_UNKNOWN = 0;
+    PROTOBUF_VEST = 1;
+    PROTOBUF_HAT = 2;
+    PROTOBUF_TOWER = 3;
+    PROTOBUF_TOWN_CENTER = 4;
+    PROTOBUF_TOWER_EYE = 5;
+    PROTOBUF_DRESS = 6;
+    PROTOBUF_WINDFLOWERS = 7;
+    PROTOBUF_REEDS = 8;
+  }
+}
+
+message PatternNamesMessage {
+  repeated string name = 1;
+}
+
+message PatternCommand {
+  int32 patternNumber = 1;
+  int32 speed = 2;
+  int32 intensity = 3;
+  int32 red = 4;
+  int32 green = 5;
+  int32 blue = 6;
+}
+
+message CommandMessage {
+  enum CommandList {
+    PROTOBUF_HEARTBEAT = 0;
+    PROTOBUF_PATTERN_NAMES = 1;
+    PROTOBUF_PATTERN_COMMAND = 2;
+    PROTOBUF_OPC_DISCONNECT = 3;
+    PROTOBUF_OPC_CONNECT = 4;
+  }
+  CommandList command = 1;
+  PatternCommand patternCommand = 2;
+}
+
+message WelcomeMessage {
+  string buildTime = 1;
+  string version = 2;
+}

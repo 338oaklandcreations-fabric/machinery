@@ -47,8 +47,9 @@ libraryDependencies ++= {
     "org.slf4j"           %   "slf4j-api"            % "1.7.10",
     "ch.qos.logback"      %   "logback-classic"      % "1.1.3",
     "org.specs2"          %%  "specs2-core"          % "2.3.11" % "test",
-    "joda-time"           %   "joda-time"            % "2.7",
+    "joda-time"           %   "joda-time"            % "2.9.9",
     "org.joda"            %   "joda-convert"         % "1.2",
+    "com.github.tototoshi"%% "scala-csv"             % "1.2.2",
     "com.pubnub"          %   "pubnub"               % "4.2.0" excludeAll(ExclusionRule(organization = "org.slf4j")))
 }
 

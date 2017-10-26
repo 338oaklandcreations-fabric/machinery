@@ -19,6 +19,10 @@
 
 package com._338oaklandcreations.fabric.machinery
 
+import java.io.File
+
+import com.github.tototoshi.csv._
+
 import com._338oaklandcreations.fabric.machinery.FabricProtos.PatternCommand
 import org.joda.time.{DateTimeZone, DateTime}
 import HostAware._
@@ -92,81 +96,110 @@ object AnimationCycle {
     (1008 -> "FS_ID_NARROW_FLAME"),
     (1009 -> "FS_ID_FLOWER_FLICKER"))
 
+  val PatternNameReverseMap = {
+    PatternNameMap.map(_.swap)
+  }
+
   val SleepThreshold = 1 * 60 * 1000
+
+  def animationsFromFile(filename: String): List[(Long, PatternCommand)] = {
+    val reader = CSVReader.open(new File(filename))
+    val cycle = reader.allWithHeaders.map { fields => {
+      (fields("time").toLong, PatternCommand(Some(PatternNameReverseMap(fields("pattern_name"))),
+        Some(fields("speed").toInt), Some(fields("intensity").toInt), Some(fields("red").toInt), Some(fields("green").toInt), Some(fields("blue").toInt)))
+    }}
+    logger.info("Read animation cycle from " + filename)
+    cycle
+  }
 
   val Steps: List[(Long, PatternCommand)] = {
     if (reedsHost) {
       logger.warn("Loading reeds animation cycle")
-      List(
-        // Pattern, speed, intensity, red, green, blue
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
-        //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(244), Some(255), Some(100), Some(0), Some(120))),
-        //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
-        //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
-        //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(229), Some(255), Some(100), Some(0), Some(120))),
-        //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(242), Some(255), Some(100), Some(0), Some(120))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
-      )
+      try {
+        animationsFromFile("data/reeds_animation_cycle.csv")
+      } catch {
+        case x: Throwable =>
+          List(
+            // Pattern, speed, intensity, red, green, blue
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
+            //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(244), Some(255), Some(100), Some(0), Some(120))),
+            //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
+            //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
+            //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_SEAHORSE_IMAGE), Some(229), Some(255), Some(100), Some(0), Some(120))),
+            //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(242), Some(255), Some(100), Some(0), Some(120))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
+          )
+      }
     } else if (windflowersHost) {
       logger.warn("Loading windflowers animation cycle")
-      List(
-        // Pattern, speed, intensity, red, green, blue
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))),  // Blue Purple
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
-        (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
-        (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
-      )
+      try {
+        animationsFromFile("data/windflowers_animation_cycle.csv")
+      } catch {
+        case x: Throwable =>
+          List(
+            // Pattern, speed, intensity, red, green, blue
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))), // Persimmon
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))), // Yellow
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))), // Champagne
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))), // Purple
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))), // Blue Purple
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))), // Teal
+            (15 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))), // Orange and faster
+            (10 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
+          )
+      }
     } else {
       logger.warn("Loading generic animation cycle")
-      List(
-        // Pattern, speed, intensity, red, green, blue
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))),  // Blue Purple
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
-        (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
-        /*
-        // Pattern, speed, intensity, red, green, blue
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))),  // Blue Purple
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
-        (2 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
-        */
-      )
+      try {
+        animationsFromFile("data/generic_animation_cycle.csv")
+      } catch {
+        case x: Throwable =>
+          List(
+            // Pattern, speed, intensity, red, green, blue
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))),  // Blue Purple
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
+            /*
+          // Pattern, speed, intensity, red, green, blue
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Persimmon
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_SPARKLE_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(65))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(58), Some(195), Some(174), Some(0))),  // Yellow
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(250), Some(162), Some(4))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(199), Some(198), Some(73))),  // Champagne
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(212), Some(116), Some(255))),  // Purple
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(255), Some(255), Some(68), Some(128), Some(128))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(96), Some(79), Some(107), Some(0), Some(255))),  // Blue Purple
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(255), Some(255), Some(128), Some(128), Some(128))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(255), Some(255), Some(128), Some(128), Some(128))),
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(57), Some(56), Some(0), Some(255), Some(145))),  // Teal
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_FLOWER_FLICKER), Some(255), Some(255), Some(128), Some(128), Some(128))),  // Orange and faster
+          (2 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(59), Some(255), Some(214), Some(200), Some(72)))
+          */
+          )
+      }
     }
   }
 }
