@@ -78,8 +78,8 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val wellLightTickInterval = 2 milliseconds
   var wellLightTickScheduler: Cancellable = null
-  val ledPowerPin = "48"
-  val dataReturnPin = "60"
+  val ledPowerPin = "60"
+  val dataReturnPin = "48"
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
 
   def setupPWM = {
