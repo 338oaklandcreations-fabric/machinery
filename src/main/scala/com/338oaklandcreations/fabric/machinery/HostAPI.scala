@@ -179,6 +179,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
         if (wellLightTickScheduler != null) wellLightTickScheduler.cancel
         wellLightTickScheduler = null
       }
+      
     case WellLightSettingsRequest =>
       context.sender ! WellLightSettings(wellLightSettings.powerOn, pwmCommandLevel(wellLightSettings.level))
     case Reboot => CommandResult(Process("sudo reboot").!)
