@@ -71,7 +71,8 @@ class MachineryController extends Actor with ActorLogging {
   var externalMessages: List[ExternalMessage] = List()
   var imageController = false
 
-  val shutdownScheduler = context.system.scheduler.schedule (0 milliseconds, 10 minutes, self, ShutdownCheckTick)
+  val shutdownScheduler = context.system.scheduler.schedule (0 milliseconds,
+    {scala.util.Properties.envOrElse("FABRIC_SHUTDOWN_SCHEDULE_MINUTES", "10").toInt} minutes, self, ShutdownCheckTick)
   val tickScheduler = context.system.scheduler.schedule (10 seconds, 5 seconds, self, SleepCheckTick)
   val sunTimingTick = context.system.scheduler.schedule (10 seconds, 24 hours, self, SunTimingTick)
   val SwitchoverTime = {
