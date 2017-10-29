@@ -261,9 +261,12 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
           frame(x + 1) = blendedGreen
           frame(x + 2) = blendedBlue
         } else if (reedsHost) {
-          frame(x) = blendedBlue
-          frame(x + 1) = blendedRed
-          frame(x + 2) = blendedGreen
+          //frame(x) = blendedBlue
+          //frame(x + 1) = blendedRed
+          //frame(x + 2) = blendedGreen
+          frame(x) = blendedRed
+          frame(x + 1) = blendedGreen
+          frame(x + 2) = blendedBlue
         } else {
           frame(x) = blendedRed
           frame(x + 1) = blendedGreen
