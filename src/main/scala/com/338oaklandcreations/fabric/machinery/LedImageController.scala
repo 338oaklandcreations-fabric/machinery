@@ -134,7 +134,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     )
     imageList.foreach({ filename =>
       try {
-        logger.info("Identifying image file: " + filename)
+        logger.warn("Identifying image file: " + filename)
         val id = filename.split('-')(0).toInt
         val name = filename.split('-')(1).split('.')(0)
         PatternNames = PatternNames :+ id + "-" + name
@@ -147,7 +147,7 @@ class LedImageController(remote: InetSocketAddress) extends Actor with ActorLogg
     })
     imageList.foreach({ filename =>
       try {
-        logger.info("Loading image file: " + filename)
+        logger.warn("Loading image file: " + filename)
         val id = filename.split('-')(0).toInt
         val name = filename.split('-')(1).split('.')(0)
         loadImage("/data/" + filename, id, name)

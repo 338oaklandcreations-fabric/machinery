@@ -205,7 +205,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (currentCpu :: cpuHistory).take (takeCount)
       memoryHistory = (currentMemory :: memoryHistory).take (takeCount)
-      dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (12)
+      dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (24)
       if (!dataReturnHistory.exists(_ != dataReturnHistory.head)) {
         if (scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "False").toBoolean) {
           logger.warn("No change in dataReturnHistory")

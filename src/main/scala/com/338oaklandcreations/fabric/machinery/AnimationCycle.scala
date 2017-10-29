@@ -108,7 +108,7 @@ object AnimationCycle {
       (fields("time").toLong, PatternCommand(Some(PatternNameReverseMap(fields("pattern_name"))),
         Some(fields("speed").toInt), Some(fields("intensity").toInt), Some(fields("red").toInt), Some(fields("green").toInt), Some(fields("blue").toInt)))
     }}
-    logger.info("Read animation cycle from " + filename)
+    logger.warn("Read animation cycle from " + filename)
     cycle
   }
 
@@ -116,12 +116,13 @@ object AnimationCycle {
     if (reedsHost) {
       logger.warn("Loading reeds animation cycle")
       try {
-        animationsFromFile("data/reeds_animation_cycle.csv")
+        animationsFromFile("/home/mauricio/animationPatterns/reeds_animation_cycle.csv")
       } catch {
         case x: Throwable =>
           List(
             // Pattern, speed, intensity, red, green, blue
             (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(100), Some(0), Some(120))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(50), Some(55), Some(0), Some(100), Some(120))),
             //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_UNDERWATER_IMAGE), Some(244), Some(255), Some(100), Some(0), Some(120))),
             //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_GOLD_BUBBLES_IMAGE), Some(254), Some(255), Some(100), Some(0), Some(120))),
             //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_GRAPE_SUNSET_IMAGE), Some(240), Some(255), Some(100), Some(0), Some(120))),
@@ -129,13 +130,15 @@ object AnimationCycle {
             //(15 * 60 * 1000L, PatternCommand(Some(FS_ID_NARROW_FLAME), Some(242), Some(255), Some(100), Some(0), Some(120))),
             (1 * 60 * 1000L, PatternCommand(Some(FS_ID_BREATHE), Some(22), Some(99), Some(0), Some(250), Some(89))),
             (1 * 60 * 1000L, PatternCommand(Some(FS_ID_ORGANIC), Some(24), Some(255), Some(110), Some(255), Some(254))),
-            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139)))
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_RAINBOW_CHASE), Some(120), Some(255), Some(255), Some(255), Some(255))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(125), Some(255), Some(254), Some(184), Some(139))),
+            (1 * 60 * 1000L, PatternCommand(Some(FS_ID_CYLON), Some(115), Some(255), Some(100), Some(200), Some(200)))
           )
       }
     } else if (windflowersHost) {
       logger.warn("Loading windflowers animation cycle")
       try {
-        animationsFromFile("data/windflowers_animation_cycle.csv")
+        animationsFromFile("/home/mauricio/animationPatterns/windflowers_animation_cycle.csv")
       } catch {
         case x: Throwable =>
           List(
@@ -160,7 +163,7 @@ object AnimationCycle {
     } else {
       logger.warn("Loading generic animation cycle")
       try {
-        animationsFromFile("data/generic_animation_cycle.csv")
+        animationsFromFile("/home/mauricio/animationPatterns/generic_animation_cycle.csv")
       } catch {
         case x: Throwable =>
           List(
