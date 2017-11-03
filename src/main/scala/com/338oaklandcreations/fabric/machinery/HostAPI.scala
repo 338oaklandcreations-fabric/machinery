@@ -138,8 +138,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   }
 
   def mailDatabreakWarning = {
-    Process("bash" :: "-c" :: "mail -s \"Check " + hostname + " for databreak\" " +
-      scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "338.oakland.creations@bustos.org") :: Nil).!!
+    //Process("bash" :: "-c" :: "mail -s \"Check " + hostname + " for databreak\" " + scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "338.oakland.creations@bustos.org") :: Nil).!!
   }
 
   def receive = {
