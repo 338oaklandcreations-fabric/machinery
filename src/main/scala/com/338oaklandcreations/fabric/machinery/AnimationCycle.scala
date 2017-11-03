@@ -116,7 +116,7 @@ object AnimationCycle {
     if (reedsHost) {
       logger.warn("Loading reeds animation cycle")
       try {
-        animationsFromFile("/home/mauricio/animationPatterns/reeds_animation_cycle.csv")
+        animationsFromFile("~/animationPatterns/reeds_animation_cycle.csv")
       } catch {
         case x: Throwable =>
           List(
@@ -138,7 +138,7 @@ object AnimationCycle {
     } else if (windflowersHost) {
       logger.warn("Loading windflowers animation cycle")
       try {
-        animationsFromFile("/home/mauricio/animationPatterns/windflowers_animation_cycle.csv")
+        animationsFromFile("~/animationPatterns/windflowers_animation_cycle.csv")
       } catch {
         case x: Throwable =>
           List(
@@ -163,7 +163,7 @@ object AnimationCycle {
     } else {
       logger.warn("Loading generic animation cycle")
       try {
-        animationsFromFile("/home/mauricio/animationPatterns/generic_animation_cycle.csv")
+        animationsFromFile("~/animationPatterns/generic_animation_cycle.csv")
       } catch {
         case x: Throwable =>
           List(

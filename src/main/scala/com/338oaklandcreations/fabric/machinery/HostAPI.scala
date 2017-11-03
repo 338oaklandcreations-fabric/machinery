@@ -20,6 +20,7 @@
 package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
+import com._338oaklandcreations.fabric.machinery.HostAware._
 import org.joda.time.{DateTimeZone, DateTime}
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
@@ -116,6 +117,15 @@ class HostAPI extends Actor with ActorLogging with HostActor {
     }
   }
 
+  def isShutdown: Boolean = {
+    val current = new DateTime(DateTimeZone.UTC)
+    if (timing.shutdown.getHourOfDay > timing.startup.getHourOfDay) {
+      (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < timing.startup.getHourOfDay) && !developmentHost
+    } else {
+      (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < (timing.startup.getHourOfDay - 24)) && !developmentHost
+    }
+  }
+
   def concerningMessages: List[ConcerningMessages] = {
     if (isArm) {
       List("furSwarmLinux.log", "opcServer.log", "machinery.log").map { file =>
@@ -125,6 +135,11 @@ class HostAPI extends Actor with ActorLogging with HostActor {
         ConcerningMessages(file, warn, error, fatal)
       }
     } else List(ConcerningMessages("furSwarmLinux.log", 0, 0, 0), ConcerningMessages("opcServer.log", 0, 0, 0), ConcerningMessages("machinery.log", 0, 0, 0))
+  }
+
+  def mailDatabreakWarning = {
+    Process("bash" :: "-c" :: "mail -s \"Check " + hostname + " for databreak\" " +
+      scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "338.oakland.creations@bustos.org") :: Nil).!!
   }
 
   def receive = {
@@ -205,11 +220,12 @@ class HostAPI extends Actor with ActorLogging with HostActor {
       val takeCount: Int = (hoursToTrack / tickInterval).toInt
       cpuHistory = (currentCpu :: cpuHistory).take (takeCount)
       memoryHistory = (currentMemory :: memoryHistory).take (takeCount)
-      dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (24)
-      if (!dataReturnHistory.exists(_ != dataReturnHistory.head)) {
-        if (scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "False").toBoolean) {
-          logger.warn("No change in dataReturnHistory")
-        }
+      dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (takeCount)
+      if (!dataReturnHistory.take(48).exists(_ != dataReturnHistory.head) &&
+        scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "False").toBoolean &&
+        !isShutdown) {
+        logger.warn("No change in `dataReturnHistory'")
+        mailDatabreakWarning
       }
 
     }
