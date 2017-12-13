@@ -74,6 +74,8 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
       setWellLightSettings ~
       wellLightSettingsRequest ~
       logLevel ~
+      shutdownCheck ~
+      dataLoopback ~
       bodyLightsRequest ~
       pooferRequest ~
       externalMessages
@@ -254,6 +256,30 @@ trait MachineryRoutes extends HttpService with UserAuthentication {
           case "INFO" => root.setLevel(Level.INFO)
           case "WARN" => root.setLevel(Level.WARN)
         }
+        ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
+  def shutdownCheck = post {
+    path("shutdownDetect" / """(ON|OFF)""".r) { (setting) =>
+      respondWithMediaType(`application/json`) { ctx =>
+        val onOff = setting match {
+          case "ON" => true
+          case "OFF" => false
+        }
+        controller ! ShutdownDetect(onOff)
+        ctx.complete(CommandResult(0).toJson.toString)
+      }
+    }
+  }
+  def dataLoopback = post {
+    path("dataLoopback" / """(ON|OFF)""".r) { (setting) =>
+      respondWithMediaType(`application/json`) { ctx =>
+        val onOff = setting match {
+          case "ON" => true
+          case "OFF" => false
+        }
+        controller ! LoopbackDetect(onOff)
         ctx.complete(CommandResult(0).toJson.toString)
       }
     }

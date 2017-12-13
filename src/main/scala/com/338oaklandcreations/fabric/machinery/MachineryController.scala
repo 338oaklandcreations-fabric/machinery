@@ -40,6 +40,8 @@ object MachineryController {
   case object SunTimingTick
   case object ExternalMessagesRequest
 
+  case class LoopbackDetect(on: Boolean)
+  case class ShutdownDetect(on: Boolean)
   case class StartupShutDownTiming(startup: DateTime, shutdown: DateTime)
 
 }
@@ -192,6 +194,12 @@ class MachineryController extends Actor with ActorLogging {
       logger.info("PooferPattern")
       apisAPI forward PooferPattern(id)
     case NodeConnectionClosed =>
+    case LoopbackDetect(setting) =>
+      logger.info("LoopbackDetection")
+      hostAPI forward LoopbackDetect(setting)
+    case ShutdownDetect(setting) =>
+      logger.info("ShutdownDetect")
+      hostAPI forward ShutdownDetect(setting)
     case unknown => logger.debug("Received Unknown message: " + unknown.toString)
   }
 

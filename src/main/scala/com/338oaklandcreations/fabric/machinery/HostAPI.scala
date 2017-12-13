@@ -21,8 +21,8 @@ package com._338oaklandcreations.fabric.machinery
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
 import com._338oaklandcreations.fabric.machinery.HostAware._
-import org.joda.time.{DateTimeZone, DateTime}
 import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -47,7 +47,8 @@ object HostAPI {
   case class MetricHistory(history: List[Double])
   case class ConcerningMessages(logfile: String, warn: Int, error: Int, fatal: Int)
   case class HostStatistics(startTime: DateTime, cpuHistory: List[Double], memoryHistory: List[Double],
-                            concerning: List[ConcerningMessages], timing: StartupShutDownTiming)
+                            concerning: List[ConcerningMessages], timing: StartupShutDownTiming,
+                            dataLoopback: Boolean, shutdownDetect: Boolean)
 
   val MonthDayTimeFormatter = DateTimeFormat.forPattern("MMMdd")
 }
@@ -66,11 +67,13 @@ class HostAPI extends Actor with ActorLogging with HostActor {
     else DateTimeFormat.forPattern("hh:mma")
   }
 
+  val ShutdownOffResetMillis = 3600000
   var cpuHistory: List[Double] = List()
   var memoryHistory: List[Double] = List()
   var dataReturnHistory: List[Int] = List()
   var startTime: DateTime = null
   var timing = StartupShutDownTiming(new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 1, 9, 0, DateTimeZone.UTC))
+  var shutdownDelayed: DateTime = null
   var wellLightSettings: WellLightSettings = null
   var currentWellLightSettings: WellLightSettings = null
   var tickInterval = 5 seconds
@@ -79,6 +82,10 @@ class HostAPI extends Actor with ActorLogging with HostActor {
   val tickScheduler = context.system.scheduler.schedule (0 milliseconds, tickInterval, self, HostTick)
   val wellLightTickInterval = 2 milliseconds
   var wellLightTickScheduler: Cancellable = null
+  var loopbackDetect = {
+    if (reedsHost) true
+    else false
+  }
   val ledPowerPin = "60"
   val dataReturnPin = "48"
   val PwmDevice = "/sys/devices/ocp.3/bs_pwm_test_P9_14.12"
@@ -119,10 +126,15 @@ class HostAPI extends Actor with ActorLogging with HostActor {
 
   def isShutdown: Boolean = {
     val current = new DateTime(DateTimeZone.UTC)
-    if (timing.shutdown.getHourOfDay > timing.startup.getHourOfDay) {
-      (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < timing.startup.getHourOfDay) && !developmentHost
+    if (shutdownDelayed != null) {
+      if (current.getMillis - shutdownDelayed.getMillis > ShutdownOffResetMillis) shutdownDelayed = null
+      false
     } else {
-      (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < (timing.startup.getHourOfDay - 24)) && !developmentHost
+      if (timing.shutdown.getHourOfDay > timing.startup.getHourOfDay) {
+        (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < timing.startup.getHourOfDay) && !developmentHost
+      } else {
+        (current.getHourOfDay >= timing.shutdown.getHourOfDay || current.getHourOfDay < (timing.startup.getHourOfDay - 24)) && !developmentHost
+      }
     }
   }
 
@@ -148,7 +160,7 @@ class HostAPI extends Actor with ActorLogging with HostActor {
     case TimeSeriesRequestCPU => context.sender ! MetricHistory(cpuHistory.reverse)
     case TimeSeriesRequestMemory => context.sender ! MetricHistory(memoryHistory.reverse)
     case HostStatisticsRequest =>
-      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse, concerningMessages, timing)
+      context.sender ! HostStatistics(startTime, cpuHistory.reverse, memoryHistory.reverse, concerningMessages, timing, loopbackDetect, shutdownDelayed == null)
     case LedPower(on) =>
       val pinValue = setGPIOpin(on, ledPowerPin)
       context.sender ! CommandResult(pinValue.toInt)
@@ -210,9 +222,13 @@ class HostAPI extends Actor with ActorLogging with HostActor {
             processStartTime.getSecondOfMinute, processStartTime.getMillisOfSecond)
         } catch {
           case e: IllegalArgumentException =>
-            val monthDayStartTime = MonthDayTimeFormatter.parseDateTime(latestStartTime)
-            if (startTime == null) new DateTime
-            else startTime = startTime.withDate(monthDayStartTime.getYear, monthDayStartTime.getMonthOfYear, monthDayStartTime.getDayOfMonth)
+            try {
+              val monthDayStartTime = MonthDayTimeFormatter.parseDateTime(latestStartTime)
+              val currentDate = new DateTime
+              startTime = new DateTime(currentDate.getYear, monthDayStartTime.getMonthOfYear, monthDayStartTime.getDayOfMonth, 0, 0)
+            } catch {
+              case x: Throwable => startTime = new DateTime
+            }
           case _: Throwable => startTime = new DateTime
         }
       }
@@ -220,14 +236,18 @@ class HostAPI extends Actor with ActorLogging with HostActor {
       cpuHistory = (currentCpu :: cpuHistory).take (takeCount)
       memoryHistory = (currentMemory :: memoryHistory).take (takeCount)
       dataReturnHistory = (getGPIOpin(dataReturnPin) :: dataReturnHistory).take (takeCount)
-      if (!dataReturnHistory.take(48).exists(_ != dataReturnHistory.head) &&
-        scala.util.Properties.envOrElse("FABRIC_DATA_HISTORY_REPORT", "False").toBoolean &&
-        !isShutdown) {
+      if (!dataReturnHistory.take(48).exists(_ != dataReturnHistory.head) && loopbackDetect && !isShutdown) {
         logger.warn("No change in `dataReturnHistory'")
         mailDatabreakWarning
       }
-
     }
+    case LoopbackDetect(setting) =>
+      logger.info("LoopbackDetection")
+      loopbackDetect = setting
+    case ShutdownDetect(setting) =>
+      logger.info("ShutdownDetect")
+      if (setting) shutdownDelayed = null
+      else shutdownDelayed = new DateTime(DateTimeZone.UTC)
     case x => logger.info ("Unknown Command: " + x.toString())
   }
 }
